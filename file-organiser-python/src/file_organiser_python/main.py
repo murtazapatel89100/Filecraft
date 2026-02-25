@@ -1,6 +1,12 @@
 import typer
-from pathlib import Path
 
-app = typer.Typer(
-    help="A simple file organiser that helps you organise your files without manual intervention."
-)
+app = typer.Typer()
+
+
+@app.command()
+def hello():
+    print("Hello")
+
+
+if __name__ == "__main__":
+    app()

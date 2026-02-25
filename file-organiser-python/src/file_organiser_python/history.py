@@ -1,9 +1,12 @@
 from pathlib import Path
 import json
-from typing import Dict
+from typing import Dict, Optional
 
 
-def save_history(history_path: Path, rename_map: Dict[str, str]) -> None:
+def save_history(
+    history_path: Path,
+    rename_map: Dict[str, str],
+) -> None:
     data = {
         "operation": "rename",
         "mappings": rename_map,

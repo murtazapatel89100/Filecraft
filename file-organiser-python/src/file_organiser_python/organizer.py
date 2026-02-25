@@ -2,6 +2,8 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
+from file_organiser_python.history import save_history
+
 
 class FileOrganizer:
     def __init__(
@@ -16,10 +18,33 @@ class FileOrganizer:
         self.dry_run = dry_run
         self.save_history = save_history
 
-        self.dry_run = dry_run
-        self.save_history = save_history
-
         if save_history:
-            self.history_path = (
-                f".organizer_history_{date.today().strftime('%Y-%m-%d')}.json"
+            self.history_path = Path(
+                self.target_dir
+                / f".organizer_history_{date.today().strftime('%Y-%m-%d')}.json"
             )
+
+    def rename(self) -> None:
+        files = [f for f in self.working_dir.iterdir() if f.is_file()]
+
+        if not files:
+            print("No files found in the working directory.")
+            return
+
+        rename_map: dict[str, str] = {}
+
+        for index, file in enumerate(sorted(files), start=1):
+            new_name = f"{index}{file.suffix}"
+            new_path = self.target_dir / new_name
+
+            rename_map[file.name] = new_name
+
+            if self.dry_run:
+                print(f"[DRY RUN] {file.name} → {new_name}")
+            else:
+                file.rename(new_path)
+                print(f"{file.name} → {new_name}")
+
+        if self.save_history and self.history_path and not self.dry_run:
+            save_history(self.history_path, rename_map)
+            print(f"History saved to {self.history_path.name}")
