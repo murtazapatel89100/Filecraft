@@ -1,0 +1,18 @@
+[project]
+name = "file-organiser-python"
+version = "0.1.0"
+description = ""
+authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = ["typer (>=0.24.1,<0.25.0)"]
+
+[tool.poetry]
+packages = [{ include = "file_organiser_python", from = "src" }]
+
+[tool.poetry.scripts]
+organizer = "file_organiser_python.main:app"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
