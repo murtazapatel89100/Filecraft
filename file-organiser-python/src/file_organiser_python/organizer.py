@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from file_organiser_python.history import save_history
+from file_organiser_python.constants import HISTORY_FILE_PREFIX
 
 
 class FileOrganizer:
@@ -21,7 +22,7 @@ class FileOrganizer:
         if save_history:
             self.history_path = Path(
                 self.target_dir
-                / f".organizer_history_{date.today().strftime('%Y-%m-%d')}.json"
+                / f"{HISTORY_FILE_PREFIX}{date.today().strftime('%Y-%m-%d')}.json"
             )
 
     def rename(self) -> None:
@@ -48,3 +49,6 @@ class FileOrganizer:
         if self.save_history and self.history_path and not self.dry_run:
             save_history(self.history_path, rename_map)
             print(f"History saved to {self.history_path.name}")
+
+    def separate(self) -> None:
+        print("Separating functionality is not implemented yet.")
