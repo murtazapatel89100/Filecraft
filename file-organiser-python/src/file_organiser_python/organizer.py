@@ -5,6 +5,7 @@ from typing import Optional
 from file_organiser_python.history import save_history
 from file_organiser_python.constants import HISTORY_FILE_PREFIX
 from file_organiser_python.enums import SeparateChoices
+from file_organiser_python.operations import SeparateByExtension, SeperateByDate
 
 
 class FileOrganizer:
@@ -15,7 +16,7 @@ class FileOrganizer:
         dry_run: bool = False,
         save_history: bool = False,
         sort_date: Optional[str] = None,
-        sort_extension: Optional[str] = None,
+        sort_extension: Optional[str] = "None",
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
@@ -25,6 +26,7 @@ class FileOrganizer:
         self.sort_date = sort_date
         self.sort_extension = sort_extension
         self.separate_choice = separate_choice
+        self.history_path: Optional[Path] = None
 
         if save_history:
             self.history_path = Path(
@@ -64,13 +66,28 @@ class FileOrganizer:
 
         match self.separate_choice:
             case SeparateChoices.EXTENSION:
-                pass
+                if not self.sort_extension:
+                    print("No extension specified for separation.")
+                    return
+
+                SeparateByExtension(
+                    extension=self.sort_extension,
+                    target_dir=self.target_dir,
+                    working_dir=self.working_dir,
+                    history=self.save_history,
+                    history_path=self.history_path if self.save_history else None,
+                    dry_run=self.dry_run,
+                )
             case SeparateChoices.DATE:
-                pass
+                SeperateByDate(
+                    dry_run=self.dry_run,
+                    sort_date=self.sort_date,
+                    target_dir=self.target_dir,
+                    working_dir=self.working_dir,
+                    history=self.save_history,
+                    history_path=self.history_path,
+                )
             case SeparateChoices.EXTENSION_AND_DATE:
                 pass
             case _:
                 print("Invalid separation choice.")
-
-    def merge(self) -> None:
-        print("Merging functionality is not implemented yet.")
