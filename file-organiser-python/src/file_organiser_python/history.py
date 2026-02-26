@@ -5,11 +5,12 @@ from typing import Dict, Optional
 
 def save_history(
     history_path: Path,
-    rename_map: Dict[str, str],
+    revert_map: Dict[str, str],
+    operation: str = "rename",
 ) -> None:
     data = {
-        "operation": "rename",
-        "mappings": rename_map,
+        "operation": operation,
+        "mappings": revert_map,
     }
 
     with open(history_path, "w") as f:
@@ -35,3 +36,7 @@ def read_history(history_path: Path) -> Dict[str, str]:
 def delete_history(history_path: Path) -> None:
     if history_path.exists():
         history_path.unlink()
+
+
+def revert_hostory():
+    pass

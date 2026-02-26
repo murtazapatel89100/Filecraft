@@ -15,3 +15,9 @@ class SeparateOptions(Enum):
     FONT = "font"
     DISK_IMAGE = "disk_image"
     CODE = "code"
+
+
+class SeparateChoices(Enum):
+    EXTENSION = "extension"
+    DATE = "date"
+    EXTENSION_AND_DATE = "extension_and_date"
