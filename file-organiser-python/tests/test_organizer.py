@@ -1,6 +1,8 @@
 import sys
 import tempfile
 import unittest
+import os
+from datetime import datetime
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -18,8 +20,10 @@ class TestOrganizerFixes(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.base = Path(self.tmp.name)
         self.work = self.base / "work"
+        self.work2 = self.base / "work2"
         self.out = self.base / "out"
         self.work.mkdir(parents=True, exist_ok=True)
+        self.work2.mkdir(parents=True, exist_ok=True)
         self.out.mkdir(parents=True, exist_ok=True)
         self.runner = CliRunner()
 
@@ -90,6 +94,105 @@ class TestOrganizerFixes(unittest.TestCase):
         assert history_path_1 is not None
         assert history_path_2 is not None
         self.assertNotEqual(history_path_1.name, history_path_2.name)
+
+    def test_merge_extension_from_multiple_working_dirs(self) -> None:
+        (self.work / "a.pdf").write_text("a", encoding="utf-8")
+        (self.work2 / "b.pdf").write_text("b", encoding="utf-8")
+        (self.work2 / "c.txt").write_text("c", encoding="utf-8")
+
+        result = self.runner.invoke(
+            app,
+            [
+                "merge",
+                "--mode",
+                "extension",
+                "--extension",
+                "pdf",
+                "--working-dir",
+                str(self.work),
+                "--working-dir",
+                str(self.work2),
+                "--target-dir",
+                str(self.out),
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue((self.out / "PDF" / "a.pdf").exists())
+        self.assertTrue((self.out / "PDF" / "b.pdf").exists())
+        self.assertTrue((self.work2 / "c.txt").exists())
+
+    def test_merge_date_from_multiple_working_dirs(self) -> None:
+        target_date = "2026-03-01"
+        expected_timestamp = datetime(2026, 3, 1, 12, 0, 0).timestamp()
+
+        file_one = self.work / "a.txt"
+        file_two = self.work2 / "b.txt"
+        file_three = self.work2 / "old.txt"
+
+        file_one.write_text("a", encoding="utf-8")
+        file_two.write_text("b", encoding="utf-8")
+        file_three.write_text("old", encoding="utf-8")
+
+        os.utime(file_one, (expected_timestamp, expected_timestamp))
+        os.utime(file_two, (expected_timestamp, expected_timestamp))
+
+        old_timestamp = datetime(2025, 2, 1, 12, 0, 0).timestamp()
+        os.utime(file_three, (old_timestamp, old_timestamp))
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.DATE,
+            sort_date=target_date,
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / target_date / "a.txt").exists())
+        self.assertTrue((self.out / target_date / "b.txt").exists())
+        self.assertTrue((self.work2 / "old.txt").exists())
+
+    def test_merge_extension_and_date_from_multiple_working_dirs(self) -> None:
+        target_date = "2026-03-01"
+        expected_timestamp = datetime(2026, 3, 1, 8, 30, 0).timestamp()
+
+        file_one = self.work / "image.jpg"
+        file_two = self.work2 / "photo.jpg"
+        file_three = self.work2 / "notes.txt"
+
+        file_one.write_text("img", encoding="utf-8")
+        file_two.write_text("img", encoding="utf-8")
+        file_three.write_text("txt", encoding="utf-8")
+
+        os.utime(file_one, (expected_timestamp, expected_timestamp))
+        os.utime(file_two, (expected_timestamp, expected_timestamp))
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.EXTENSION_AND_DATE,
+            sort_date=target_date,
+            sort_extension=".jpg",
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / target_date / "JPG" / "image.jpg").exists())
+        self.assertTrue((self.out / target_date / "JPG" / "photo.jpg").exists())
+        self.assertTrue((self.work2 / "notes.txt").exists())
+
+    def test_merge_file_type_from_multiple_working_dirs(self) -> None:
+        (self.work / "song.mp3").write_text("audio", encoding="utf-8")
+        (self.work2 / "paper.pdf").write_text("doc", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.FILE,
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / "AUDIO" / "song.mp3").exists())
+        self.assertTrue((self.out / "DOCUMENTS" / "paper.pdf").exists())
 
 
 if __name__ == "__main__":

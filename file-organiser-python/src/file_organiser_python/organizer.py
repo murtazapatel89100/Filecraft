@@ -10,6 +10,10 @@ from file_organiser_python.operations import (
     SeparateByDate,
     SeparateByExtensionAndDate,
     SeparateByFileType,
+    MergeByExtension,
+    MergeByDate,
+    MergeByExtensionAndDate,
+    MergeByFileType,
 )
 from file_organiser_python.utils import build_non_conflicting_path
 
@@ -19,6 +23,7 @@ class FileOrganizer:
         self,
         target_dir: Optional[Path] = None,
         working_dir: Optional[Path] = None,
+        working_dirs: Optional[list[Path]] = None,
         dry_run: bool = False,
         save_history: bool = False,
         sort_date: Optional[str] = None,
@@ -27,6 +32,11 @@ class FileOrganizer:
     ) -> None:
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
         self.working_dir = working_dir.resolve() if working_dir else Path.cwd()
+        self.working_dirs = (
+            [path.resolve() for path in working_dirs]
+            if working_dirs
+            else [self.working_dir]
+        )
         self.dry_run = dry_run
         self.save_history = save_history
         self.sort_date = sort_date
@@ -116,3 +126,56 @@ class FileOrganizer:
                 )
             case _:
                 print("Invalid separation choice.")
+
+    def merge(self) -> None:
+        if not self.working_dirs:
+            print("No working directories specified for merge.")
+            return
+
+        match self.separate_choice:
+            case SeparateChoices.EXTENSION:
+                if not self.sort_extension:
+                    print("No extension specified for merge.")
+                    return
+
+                MergeByExtension(
+                    extension=self.sort_extension,
+                    target_dir=self.target_dir,
+                    working_dirs=self.working_dirs,
+                    history=self.save_history,
+                    history_path=self.history_path if self.save_history else None,
+                    dry_run=self.dry_run,
+                )
+            case SeparateChoices.DATE:
+                MergeByDate(
+                    sort_date=self.sort_date,
+                    target_dir=self.target_dir,
+                    working_dirs=self.working_dirs,
+                    history=self.save_history,
+                    history_path=self.history_path,
+                    dry_run=self.dry_run,
+                )
+            case SeparateChoices.EXTENSION_AND_DATE:
+                if not self.sort_extension:
+                    print("No extension specified for merge.")
+                    return
+
+                MergeByExtensionAndDate(
+                    sort_date=self.sort_date,
+                    extension=self.sort_extension,
+                    target_dir=self.target_dir,
+                    working_dirs=self.working_dirs,
+                    history=self.save_history,
+                    history_path=self.history_path,
+                    dry_run=self.dry_run,
+                )
+            case SeparateChoices.FILE:
+                MergeByFileType(
+                    target_dir=self.target_dir,
+                    working_dirs=self.working_dirs,
+                    history=self.save_history,
+                    history_path=self.history_path,
+                    dry_run=self.dry_run,
+                )
+            case _:
+                print("Invalid merge choice.")

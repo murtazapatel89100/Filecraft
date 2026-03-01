@@ -52,6 +52,13 @@ for ext in DISK_IMAGE_EXTENSIONS:
 KNOWN_EXTENSIONS = set(EXTENSION_TYPE_MAP.keys())
 
 
+def _files_from_working_dirs(working_dirs: list[Path]) -> list[Path]:
+    files: list[Path] = []
+    for working_dir in working_dirs:
+        files.extend([f for f in working_dir.iterdir() if f.is_file()])
+    return files
+
+
 def SeparateByExtension(
     extension: str,
     target_dir: Path,
@@ -261,6 +268,239 @@ def SeparateByFileType(
             continue
 
         print(f"Moving {f.name} → {new_path}...")
+        f.rename(new_path)
+        revert_map[str(new_path.resolve())] = str(original_path)
+
+    if history and not dry_run:
+        if not history_path:
+            print("Failed to validate History path, cannot save history.")
+            return
+
+        save_history(
+            history_path=history_path,
+            revert_map=revert_map,
+            operation=operation,
+        )
+
+
+def MergeByExtension(
+    extension: str,
+    target_dir: Path,
+    working_dirs: list[Path],
+    history_path: Optional[Path],
+    history: bool = False,
+    dry_run: bool = False,
+) -> None:
+    print(
+        f"Merging by extension: {extension} from {len(working_dirs)} working directories → {target_dir}"
+    )
+
+    normalized_extension = extension.lower()
+    sorted_dir = target_dir / normalized_extension.lstrip(".").upper()
+
+    print(f"Ensuring directory exists: {sorted_dir}...")
+    ensure_directory(sorted_dir, dry_run=dry_run)
+
+    files = [
+        f
+        for f in _files_from_working_dirs(working_dirs)
+        if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
+    ]
+    if not files:
+        print(
+            f"No files with extension '{extension}' found in provided working directories."
+        )
+        return
+
+    revert_map: dict[str, str] = {}
+    operation = "merge_by_extension"
+
+    for f in files:
+        destination_path = sorted_dir / f.name
+        new_path = build_non_conflicting_path(destination_path)
+        original_path = f.resolve()
+
+        if dry_run:
+            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            continue
+
+        print(f"Moving {f} → {new_path}...")
+        f.rename(new_path)
+        revert_map[str(new_path.resolve())] = str(original_path)
+
+    if history and not dry_run:
+        if not history_path:
+            print("Failed to validate History path, cannot save history.")
+            return
+
+        save_history(
+            history_path=history_path,
+            revert_map=revert_map,
+            operation=operation,
+        )
+
+
+def MergeByDate(
+    sort_date: Optional[str],
+    target_dir: Path,
+    working_dirs: list[Path],
+    history: bool,
+    history_path: Optional[Path],
+    dry_run: bool,
+) -> None:
+    if sort_date:
+        print(
+            f"Merging files modified on {sort_date} from {len(working_dirs)} working directories → {target_dir}"
+        )
+    else:
+        print(
+            f"Merging files modified today from {len(working_dirs)} working directories → {target_dir}"
+        )
+
+    sorted_dir = target_dir / (sort_date if sort_date else date.today().isoformat())
+
+    print(f"Ensuring directory exists: {sorted_dir}...")
+    ensure_directory(sorted_dir, dry_run=dry_run)
+
+    target_date = date.fromisoformat(sort_date) if sort_date else date.today()
+    files = [
+        f
+        for f in _files_from_working_dirs(working_dirs)
+        if datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
+    ]
+
+    if not files:
+        print(
+            f"No files modified on {sort_date if sort_date else 'today'} found in provided working directories."
+        )
+        return
+
+    revert_map: dict[str, str] = {}
+    operation = "merge_by_date"
+
+    for f in files:
+        destination_path = sorted_dir / f.name
+        new_path = build_non_conflicting_path(destination_path)
+        original_path = f.resolve()
+        if dry_run:
+            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            continue
+
+        print(f"Moving {f} → {new_path}...")
+        f.rename(new_path)
+        revert_map[str(new_path.resolve())] = str(original_path)
+
+    if history and not dry_run:
+        if not history_path:
+            print("Failed to validate History path, cannot save history.")
+            return
+
+        save_history(
+            history_path=history_path,
+            revert_map=revert_map,
+            operation=operation,
+        )
+
+
+def MergeByExtensionAndDate(
+    sort_date: Optional[str],
+    extension: str,
+    target_dir: Path,
+    working_dirs: list[Path],
+    history: bool = False,
+    history_path: Optional[Path] = None,
+    dry_run: bool = False,
+) -> None:
+    normalized_extension = extension.lower()
+    selected_date = date.fromisoformat(sort_date) if sort_date else date.today()
+    date_folder_name = selected_date.isoformat()
+
+    print(
+        f"Merging by extension and date: {extension}, {date_folder_name} from {len(working_dirs)} working directories → {target_dir}"
+    )
+
+    sorted_dir = (
+        target_dir / date_folder_name / normalized_extension.lstrip(".").upper()
+    )
+    print(f"Ensuring directory exists: {sorted_dir}...")
+    ensure_directory(sorted_dir, dry_run=dry_run)
+
+    files = [
+        f
+        for f in _files_from_working_dirs(working_dirs)
+        if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
+        and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
+    ]
+
+    if not files:
+        print(
+            f"No files with extension '{extension}' modified on {date_folder_name} found in provided working directories."
+        )
+        return
+
+    revert_map: dict[str, str] = {}
+    operation = "merge_by_extension_and_date"
+
+    for f in files:
+        destination_path = sorted_dir / f.name
+        new_path = build_non_conflicting_path(destination_path)
+        original_path = f.resolve()
+
+        if dry_run:
+            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            continue
+
+        print(f"Moving {f} → {new_path}...")
+        f.rename(new_path)
+        revert_map[str(new_path.resolve())] = str(original_path)
+
+    if history and not dry_run:
+        if not history_path:
+            print("Failed to validate History path, cannot save history.")
+            return
+
+        save_history(
+            history_path=history_path,
+            revert_map=revert_map,
+            operation=operation,
+        )
+
+
+def MergeByFileType(
+    target_dir: Path,
+    working_dirs: list[Path],
+    history: bool = False,
+    history_path: Optional[Path] = None,
+    dry_run: bool = False,
+) -> None:
+    print(
+        f"Merging all files by file type from {len(working_dirs)} working directories → {target_dir}"
+    )
+
+    files = _files_from_working_dirs(working_dirs)
+    if not files:
+        print("No files found in provided working directories.")
+        return
+
+    revert_map: dict[str, str] = {}
+    operation = "merge_by_file_type"
+
+    for f in files:
+        extension = get_extension(f, KNOWN_EXTENSIONS)
+        folder_name = EXTENSION_TYPE_MAP.get(extension, "OTHERS")
+        sorted_dir = target_dir / folder_name
+
+        ensure_directory(sorted_dir, dry_run=dry_run)
+
+        destination_path = sorted_dir / f.name
+        new_path = build_non_conflicting_path(destination_path)
+        original_path = f.resolve()
+
+        if dry_run:
+            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            continue
+
+        print(f"Moving {f} → {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 

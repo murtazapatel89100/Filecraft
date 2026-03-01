@@ -26,6 +26,7 @@ PYTHONPATH=src python -m file_organiser_python.main --help
 
 - `organizer rename`
 - `organizer separate`
+- `organizer merge`
 - `organizer revert`
 
 All commands support `--dry-run` to preview actions without moving files.
@@ -93,6 +94,36 @@ Reverts moves using a history file.
 ```bash
 organizer revert --directory ./out
 organizer revert --history-file ./out/.organizer_history_2026-03-01_12-00-00-123456.json
+```
+
+## `merge`
+
+Merges files from multiple `working_dir` locations into a single `target_dir`.
+
+### Modes
+
+- `extension`: Merge files of a specific extension into `TARGET/EXT`
+- `date`: Merge files modified on a specific date (or today) into `TARGET/YYYY-MM-DD`
+- `extension_and_date`: Combine both filters into `TARGET/YYYY-MM-DD/EXT`
+- `file`: Merge all files by file type category (`IMAGES`, `VIDEOS`, `DOCUMENTS`, `ARCHIVES`, etc.)
+
+### Options
+
+- `--mode [extension|date|extension_and_date|file]` (default: `extension`)
+- `--extension TEXT` (required for `extension` and `extension_and_date`)
+- `--date YYYY-MM-DD` (used by `date` and `extension_and_date`; validated)
+- `--working-dir PATH` (required, repeat for multiple source directories)
+- `--target-dir PATH` (default: current directory)
+- `--dry-run`
+- `--history`
+
+### Examples
+
+```bash
+organizer merge --mode extension --extension pdf --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
+organizer merge --mode date --date 2026-03-01 --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
+organizer merge --mode extension_and_date --extension .jpg --date 2026-03-01 --working-dir ./camera --working-dir ./phone --target-dir ./merged
+organizer merge --mode file --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
 ```
 
 ## Notes
