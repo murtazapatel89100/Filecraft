@@ -86,31 +86,3 @@ def revert_history(
         delete_history(history_path)
 
     return reverted_count
-
-
-def revert_history_legacy(
-    history_path: Optional[Path] = None,
-    directory: Optional[Path] = None,
-    dry_run: bool = False,
-    delete_after_revert: bool = True,
-) -> int:
-    return revert_history(
-        history_path=history_path,
-        directory=directory,
-        dry_run=dry_run,
-        delete_after_revert=delete_after_revert,
-    )
-
-
-def revert_hostory(
-    history_path: Optional[Path] = None,
-    directory: Optional[Path] = None,
-    dry_run: bool = False,
-    delete_after_revert: bool = True,
-) -> int:
-    return revert_history_legacy(
-        history_path=history_path,
-        directory=directory,
-        dry_run=dry_run,
-        delete_after_revert=delete_after_revert,
-    )
