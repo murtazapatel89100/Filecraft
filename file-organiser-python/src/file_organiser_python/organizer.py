@@ -1,11 +1,17 @@
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from file_organiser_python.history import save_history
 from file_organiser_python.constants import HISTORY_FILE_PREFIX
 from file_organiser_python.enums import SeparateChoices
-from file_organiser_python.operations import SeparateByExtension, SeperateByDate
+from file_organiser_python.operations import (
+    SeparateByExtension,
+    SeparateByDate,
+    SeparateByExtensionAndDate,
+    SeparateByFileType,
+)
+from file_organiser_python.utils import build_non_conflicting_path
 
 
 class FileOrganizer:
@@ -16,7 +22,7 @@ class FileOrganizer:
         dry_run: bool = False,
         save_history: bool = False,
         sort_date: Optional[str] = None,
-        sort_extension: Optional[str] = "None",
+        sort_extension: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
@@ -29,10 +35,11 @@ class FileOrganizer:
         self.history_path: Optional[Path] = None
 
         if save_history:
-            self.history_path = Path(
+            candidate_history_path = Path(
                 self.target_dir
-                / f"{HISTORY_FILE_PREFIX}{date.today().strftime('%Y-%m-%d')}.json"
+                / f"{HISTORY_FILE_PREFIX}{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}.json"
             )
+            self.history_path = build_non_conflicting_path(candidate_history_path)
 
     def rename(self) -> None:
         files = [f for f in self.working_dir.iterdir() if f.is_file()]
@@ -45,25 +52,23 @@ class FileOrganizer:
 
         for index, file in enumerate(sorted(files), start=1):
             new_name = f"{index}{file.suffix}"
-            new_path = self.target_dir / new_name
+            destination_path = self.target_dir / new_name
+            new_path = build_non_conflicting_path(destination_path)
 
-            rename_map[file.name] = new_name
+            original_path = file.resolve()
 
             if self.dry_run:
-                print(f"[DRY RUN] {file.name} → {new_name}")
+                print(f"[DRY RUN] {file.name} → {new_path.name}")
             else:
                 file.rename(new_path)
-                print(f"{file.name} → {new_name}")
+                print(f"{file.name} → {new_path.name}")
+                rename_map[str(new_path.resolve())] = str(original_path)
 
         if self.save_history and self.history_path and not self.dry_run:
             save_history(self.history_path, rename_map)
             print(f"History saved to {self.history_path.name}")
 
     def separate(self) -> None:
-        if not self.sort_date and not self.sort_extension:
-            print("No value specified for separation.")
-            return
-
         match self.separate_choice:
             case SeparateChoices.EXTENSION:
                 if not self.sort_extension:
@@ -79,7 +84,7 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case SeparateChoices.DATE:
-                SeperateByDate(
+                SeparateByDate(
                     dry_run=self.dry_run,
                     sort_date=self.sort_date,
                     target_dir=self.target_dir,
@@ -88,6 +93,26 @@ class FileOrganizer:
                     history_path=self.history_path,
                 )
             case SeparateChoices.EXTENSION_AND_DATE:
-                pass
+                if not self.sort_extension:
+                    print("No extension specified for separation.")
+                    return
+
+                SeparateByExtensionAndDate(
+                    sort_date=self.sort_date,
+                    extension=self.sort_extension,
+                    target_dir=self.target_dir,
+                    working_dir=self.working_dir,
+                    history=self.save_history,
+                    history_path=self.history_path,
+                    dry_run=self.dry_run,
+                )
+            case SeparateChoices.FILE:
+                SeparateByFileType(
+                    target_dir=self.target_dir,
+                    working_dir=self.working_dir,
+                    history=self.save_history,
+                    history_path=self.history_path,
+                    dry_run=self.dry_run,
+                )
             case _:
                 print("Invalid separation choice.")

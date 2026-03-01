@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Iterable
 
 
 def validate_directory(path: Path) -> None:
@@ -13,27 +13,21 @@ def validate_directory(path: Path) -> None:
         raise ValueError(f"Path is not a directory: {path}")
 
 
-def list_files(directory: Path) -> List[Path]:
+def get_extension(file: Path, known_extensions: Iterable[str] | None = None) -> str:
     """
-    Return all files (not directories) inside a directory.
+    Return normalized file extension in lowercase.
+    Supports compound extensions (e.g. '.tar.gz') when provided in known_extensions.
     """
-    return [item for item in directory.iterdir() if item.is_file()]
+    file_name = file.name.lower()
 
+    if known_extensions:
+        matches = [
+            ext.lower() for ext in known_extensions if file_name.endswith(ext.lower())
+        ]
+        if matches:
+            return max(matches, key=len)
 
-def get_extension(file: Path) -> str:
-    """
-    Return the normalized file extension (without dot, lowercase).
-    Example: '.PDF' -> 'pdf'
-    """
-    return file.suffix.lower().lstrip(".")
-
-
-def filter_by_extension(files: List[Path], extension: str) -> List[Path]:
-    """
-    Filter files by a specific extension.
-    """
-    extension = extension.lower().lstrip(".")
-    return [file for file in files if get_extension(file) == extension]
+    return file.suffix.lower()
 
 
 def ensure_directory(path: Path, dry_run: bool = False) -> None:
@@ -47,12 +41,17 @@ def ensure_directory(path: Path, dry_run: bool = False) -> None:
             path.mkdir(parents=True, exist_ok=True)
 
 
-def perform_action(message: str, dry_run: bool) -> None:
+def build_non_conflicting_path(path: Path) -> Path:
     """
-    Print action message.
-    If dry_run is True, prefix with DRY RUN.
+    Return a non-conflicting path by appending an incrementing suffix when needed.
+    Example: file.txt -> file_1.txt
     """
-    if dry_run:
-        print(f"[DRY RUN] {message}")
-    else:
-        print(message)
+    if not path.exists():
+        return path
+
+    counter = 1
+    while True:
+        candidate = path.with_name(f"{path.stem}_{counter}{path.suffix}")
+        if not candidate.exists():
+            return candidate
+        counter += 1
