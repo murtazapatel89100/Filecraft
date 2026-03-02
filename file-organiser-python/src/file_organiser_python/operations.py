@@ -66,7 +66,7 @@ def SeparateByExtension(
     history: bool = False,
     dry_run: bool = False,
 ) -> None:
-    print(f"Separating by extension: {extension} in {working_dir} → {target_dir}")
+    print(f"Separating by extension: {extension} in {working_dir} -> {target_dir}")
 
     normalized_extension = extension.lower()
     sorted_dir = target_dir / normalized_extension.lstrip(".").upper()
@@ -92,10 +92,10 @@ def SeparateByExtension(
         new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
         if dry_run:
-            print(f"[DRY RUN] Would move {f.name} → {new_path}...")
+            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
             continue
 
-        print(f"Moving {f.name} → {new_path}...")
+        print(f"Moving {f.name} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -119,10 +119,10 @@ def SeparateByDate(
 ) -> None:
     if sort_date:
         print(
-            f"Seperating files modified on {sort_date} in {working_dir} → {target_dir}"
+            f"Seperating files modified on {sort_date} in {working_dir} -> {target_dir}"
         )
     else:
-        print(f"Seperating files modified today in {working_dir} → {target_dir}")
+        print(f"Seperating files modified today in {working_dir} -> {target_dir}")
 
     sorted_dir = target_dir / (sort_date if sort_date else date.today().isoformat())
 
@@ -152,10 +152,10 @@ def SeparateByDate(
         new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
         if dry_run:
-            print(f"[DRY RUN] Would move {f.name} → {new_path}...")
+            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
             continue
 
-        print(f"Moving {f.name} → {new_path}...")
+        print(f"Moving {f.name} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -183,7 +183,7 @@ def SeparateByExtensionAndDate(
     date_folder_name = selected_date.isoformat()
 
     print(
-        f"Separating by extension and date: {extension}, {date_folder_name} in {working_dir} → {target_dir}"
+        f"Separating by extension and date: {extension}, {date_folder_name} in {working_dir} -> {target_dir}"
     )
 
     sorted_dir = (
@@ -215,10 +215,10 @@ def SeparateByExtensionAndDate(
         original_path = f.resolve()
 
         if dry_run:
-            print(f"[DRY RUN] Would move {f.name} → {new_path}...")
+            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
             continue
 
-        print(f"Moving {f.name} → {new_path}...")
+        print(f"Moving {f.name} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -241,7 +241,7 @@ def SeparateByFileType(
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
-    print(f"Separating all files by file type in {working_dir} → {target_dir}")
+    print(f"Separating all files by file type in {working_dir} -> {target_dir}")
 
     files = [f for f in working_dir.iterdir() if f.is_file()]
     if not files:
@@ -263,10 +263,10 @@ def SeparateByFileType(
         original_path = f.resolve()
 
         if dry_run:
-            print(f"[DRY RUN] Would move {f.name} → {new_path}...")
+            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
             continue
 
-        print(f"Moving {f.name} → {new_path}...")
+        print(f"Moving {f.name} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -291,7 +291,7 @@ def MergeByExtension(
     dry_run: bool = False,
 ) -> None:
     print(
-        f"Merging by extension: {extension} from {len(working_dirs)} working directories → {target_dir}"
+        f"Merging by extension: {extension} from {len(working_dirs)} working directories -> {target_dir}"
     )
 
     normalized_extension = extension.lower()
@@ -320,10 +320,10 @@ def MergeByExtension(
         original_path = f.resolve()
 
         if dry_run:
-            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            print(f"[DRY RUN] Would move {f} -> {new_path}...")
             continue
 
-        print(f"Moving {f} → {new_path}...")
+        print(f"Moving {f} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -349,11 +349,11 @@ def MergeByDate(
 ) -> None:
     if sort_date:
         print(
-            f"Merging files modified on {sort_date} from {len(working_dirs)} working directories → {target_dir}"
+            f"Merging files modified on {sort_date} from {len(working_dirs)} working directories -> {target_dir}"
         )
     else:
         print(
-            f"Merging files modified today from {len(working_dirs)} working directories → {target_dir}"
+            f"Merging files modified today from {len(working_dirs)} working directories -> {target_dir}"
         )
 
     sorted_dir = target_dir / (sort_date if sort_date else date.today().isoformat())
@@ -382,10 +382,10 @@ def MergeByDate(
         new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
         if dry_run:
-            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            print(f"[DRY RUN] Would move {f} -> {new_path}...")
             continue
 
-        print(f"Moving {f} → {new_path}...")
+        print(f"Moving {f} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -415,7 +415,7 @@ def MergeByExtensionAndDate(
     date_folder_name = selected_date.isoformat()
 
     print(
-        f"Merging by extension and date: {extension}, {date_folder_name} from {len(working_dirs)} working directories → {target_dir}"
+        f"Merging by extension and date: {extension}, {date_folder_name} from {len(working_dirs)} working directories -> {target_dir}"
     )
 
     sorted_dir = (
@@ -446,10 +446,10 @@ def MergeByExtensionAndDate(
         original_path = f.resolve()
 
         if dry_run:
-            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            print(f"[DRY RUN] Would move {f} -> {new_path}...")
             continue
 
-        print(f"Moving {f} → {new_path}...")
+        print(f"Moving {f} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 
@@ -473,7 +473,7 @@ def MergeByFileType(
     dry_run: bool = False,
 ) -> None:
     print(
-        f"Merging all files by file type from {len(working_dirs)} working directories → {target_dir}"
+        f"Merging all files by file type from {len(working_dirs)} working directories -> {target_dir}"
     )
 
     files = _files_from_working_dirs(working_dirs)
@@ -496,10 +496,10 @@ def MergeByFileType(
         original_path = f.resolve()
 
         if dry_run:
-            print(f"[DRY RUN] Would move {f} → {new_path}...")
+            print(f"[DRY RUN] Would move {f} -> {new_path}...")
             continue
 
-        print(f"Moving {f} → {new_path}...")
+        print(f"Moving {f} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
 

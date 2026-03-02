@@ -73,7 +73,7 @@ def revert_history(
             continue
 
         if dry_run:
-            print(f"[DRY RUN] Would move {current_path} → {original_path}")
+            print(f"[DRY RUN] Would move {current_path} -> {original_path}")
             reverted_count += 1
             continue
 

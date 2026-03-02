@@ -68,10 +68,10 @@ class FileOrganizer:
             original_path = file.resolve()
 
             if self.dry_run:
-                print(f"[DRY RUN] {file.name} → {new_path.name}")
+                print(f"[DRY RUN] {file.name} -> {new_path.name}")
             else:
                 file.rename(new_path)
-                print(f"{file.name} → {new_path.name}")
+                print(f"{file.name} -> {new_path.name}")
                 rename_map[str(new_path.resolve())] = str(original_path)
 
         if self.save_history and self.history_path and not self.dry_run:
