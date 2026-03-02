@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 
 from file_organiser_python.history import save_history
 from file_organiser_python.constants import HISTORY_FILE_PREFIX
@@ -47,7 +48,7 @@ class FileOrganizer:
         if save_history:
             candidate_history_path = Path(
                 self.target_dir
-                / f"{HISTORY_FILE_PREFIX}{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}.json"
+                / f"{HISTORY_FILE_PREFIX}{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}_{uuid4().hex[:8]}.json"
             )
             self.history_path = build_non_conflicting_path(candidate_history_path)
 
