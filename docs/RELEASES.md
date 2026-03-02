@@ -5,7 +5,10 @@ This repository has two CLI implementations:
 - `file-organiser-python` (Typer)
 - `file-organiser-go` (Cobra)
 
-Releases are automated with GitHub Actions and are triggered **only** when a semantic version tag is pushed.
+Releases are automated with GitHub Actions and are triggered by either:
+
+- pushing a semantic version tag
+- manually dispatching the workflow with a version input
 
 ## Release Trigger Rules
 
@@ -13,9 +16,11 @@ Release workflow: `.github/workflows/release.yml`
 
 A release runs only when:
 
-1. A tag matching `v*` is pushed (for example `v1.2.3`)
-2. The tag is valid semver (`vMAJOR.MINOR.PATCH`, optional pre-release/build suffix)
-3. The tag version matches both:
+1. Trigger source is one of:
+  - push tag matching `v*` (for example `v1.2.3`), or
+  - manual dispatch input `version` (for example `1.2.3` or `v1.2.3`)
+2. The resolved release version is valid semver (`vMAJOR.MINOR.PATCH`, optional pre-release/build suffix)
+3. The resolved version (without `v`) matches both:
    - root `VERSION` file
    - `file-organiser-python/pyproject.toml` `version`
 
@@ -23,7 +28,7 @@ If any check fails, release is stopped.
 
 ## What the Release Workflow Produces
 
-For each valid version tag:
+For each valid version:
 
 - Builds Python CLI executable using `PyInstaller`
 - Builds Go CLI binaries for:
@@ -76,14 +81,21 @@ git commit -m "chore(release): bump version to v1.2.0"
 git push origin main
 ```
 
-### 4) Create and push release tag
+### 4) Trigger the release
+
+Option A (recommended): create and push release tag
 
 ```bash
 git tag v1.2.0
 git push origin v1.2.0
 ```
 
-That tag push triggers the release workflow automatically.
+Option B: run workflow manually from GitHub Actions UI
+
+- Workflow: `Release`
+- Input `version`: `1.2.0` or `v1.2.0`
+
+Either option triggers the release workflow.
 
 ## How Not to Break the Pattern
 
@@ -98,4 +110,4 @@ That tag push triggers the release workflow automatically.
 ## CI vs Release
 
 - `ci.yml` runs on push/PR to `main`: lint, tests, build for both Python and Go.
-- `release.yml` runs only on valid version tag push: builds release artifacts and publishes GitHub Release.
+- `release.yml` runs on valid version tag push or manual workflow dispatch: builds release artifacts and publishes GitHub Release.
