@@ -23,7 +23,6 @@ from file_organiser_python.constants import (
 
 from datetime import date, datetime
 
-
 EXTENSION_TYPE_MAP: dict[str, str] = {}
 
 for ext in IMAGE_EXTENSIONS:
