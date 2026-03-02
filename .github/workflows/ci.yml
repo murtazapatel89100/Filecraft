@@ -1,0 +1,121 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+
+jobs:
+    python-cli:
+        name: Python CLI (${{ matrix.label }})
+        runs-on: ${{ matrix.runs_on }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - runs_on: ubuntu-latest
+                      label: linux-amd64
+                    - runs_on: macos-latest
+                      label: macos-amd64
+                    - runs_on: windows-latest
+                      label: windows-amd64
+        defaults:
+            run:
+                working-directory: file-organiser-python
+                shell: bash
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+
+            - name: Install Poetry
+              run: pip install poetry
+
+            - name: Install dependencies
+              run: poetry install --with dev --sync
+
+            - name: Lint (Black)
+              run: poetry run black --check src tests
+
+            - name: Run tests
+              run: poetry run python -m unittest discover -s tests -p "test_*.py"
+
+            - name: Build wheel/sdist
+              run: poetry build
+
+            - name: Build executable (PyInstaller)
+              run: poetry run pyinstaller --onefile --name organizer-python-${{ matrix.label }} --paths src src/file_organiser_python/main.py
+
+            - name: Upload Python build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: python-cli-build-${{ matrix.label }}
+                  path: file-organiser-python/dist/*
+
+    go-cli:
+        name: Go CLI (${{ matrix.label }})
+        runs-on: ${{ matrix.runs_on }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - runs_on: ubuntu-latest
+                      label: linux-amd64
+                      ext: ""
+                    - runs_on: macos-latest
+                      label: macos-amd64
+                      ext: ""
+                    - runs_on: windows-latest
+                      label: windows-amd64
+                      ext: ".exe"
+        defaults:
+            run:
+                working-directory: file-organiser-go
+                shell: bash
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: file-organiser-go/go.mod
+
+            - name: Download Go modules
+              run: go mod download
+
+            - name: Lint (gofmt)
+              run: |
+                  unformatted=$(gofmt -l .)
+                  if [ -n "$unformatted" ]; then
+                    echo "Files not formatted with gofmt:"
+                    echo "$unformatted"
+                    exit 1
+                  fi
+
+            - name: Lint (go vet)
+              run: go vet ./...
+
+            - name: Run tests
+              run: go test ./...
+
+            - name: Build binary
+              run: |
+                  mkdir -p dist
+                  go build -o dist/organizer-go-${{ matrix.label }}${{ matrix.ext }} .
+
+            - name: Upload Go build artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: go-cli-build-${{ matrix.label }}
+                  path: file-organiser-go/dist/*
