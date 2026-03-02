@@ -14,3 +14,7 @@ Both implementations support:
 - `revert`: restore moved files from saved history
 
 Each implementation has its own README with install, usage examples, and command options.
+
+## Release Process
+
+- See [docs/RELEASES.md](docs/RELEASES.md) for versioning, release commands, and workflow rules.
