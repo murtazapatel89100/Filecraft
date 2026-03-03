@@ -1,0 +1,11 @@
+# Default owner for the entire repository
+* @murtazapatel
+
+# Python implementation
+/file-organiser-python/ @murtazapatel
+
+# Go implementation
+/file-organiser-go/ @murtazapatel
+
+# CI and release automation
+/.github/workflows/ @murtazapatel

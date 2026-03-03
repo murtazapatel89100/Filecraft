@@ -1,0 +1,56 @@
+name: Feature request
+description: Suggest a new feature or behavior improvement
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement.
+
+  - type: input
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve?
+      placeholder: When I try to ..., it is difficult because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe your preferred behavior.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: implementation_scope
+    attributes:
+      label: Expected implementation scope
+      options:
+        - file-organiser-python only
+        - file-organiser-go only
+        - both implementations
+        - not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: cli_examples
+    attributes:
+      label: Example CLI usage
+      description: Show example command(s), if applicable.
+      render: shell
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
