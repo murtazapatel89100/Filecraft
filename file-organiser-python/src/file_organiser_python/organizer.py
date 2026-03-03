@@ -29,6 +29,7 @@ class FileOrganizer:
         save_history: bool = False,
         sort_date: Optional[str] = None,
         sort_extension: Optional[str] = None,
+        file_type: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
@@ -42,6 +43,7 @@ class FileOrganizer:
         self.save_history = save_history
         self.sort_date = sort_date
         self.sort_extension = sort_extension
+        self.file_type = file_type
         self.separate_choice = separate_choice
         self.history_path: Optional[Path] = None
 
@@ -121,6 +123,7 @@ class FileOrganizer:
                 SeparateByFileType(
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
+                    file_type=self.file_type,
                     history=self.save_history,
                     history_path=self.history_path,
                     dry_run=self.dry_run,

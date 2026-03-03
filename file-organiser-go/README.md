@@ -62,6 +62,7 @@ Separates files according to mode.
 
 - `--mode [extension|date|extension_and_date|file]` (default: `extension`)
 - `--extension TEXT` (required for `extension` and `extension_and_date`)
+- `--file-type TEXT` (optional for `file`; accepts category like `documents` or extension like `pdf`)
 - `--date YYYY-MM-DD` (used by `date` and `extension_and_date`; validated)
 - `--working-dir PATH` (default: current directory)
 - `--target-dir PATH` (default: current directory)
@@ -75,6 +76,7 @@ go run . separate --mode extension --extension pdf --working-dir ./in --target-d
 go run . separate --mode date --date 2026-03-01 --working-dir ./in --target-dir ./out
 go run . separate --mode extension_and_date --extension .jpg --date 2026-03-01 --working-dir ./in --target-dir ./out
 go run . separate --mode file --working-dir ./in --target-dir ./out
+go run . separate --mode file --file-type pdf --working-dir ./in --target-dir ./out
 ```
 
 ## `merge`

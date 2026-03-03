@@ -9,6 +9,7 @@ import (
 func newSeparateCmd() *cobra.Command {
 	var mode string
 	var extension string
+	var fileType string
 	var sortDate string
 	var targetDir string
 	var workingDir string
@@ -34,6 +35,7 @@ func newSeparateCmd() *cobra.Command {
 			cfg := organizer.Config{
 				Mode:        organizer.Mode(mode),
 				SortExt:     normalizeExtension(extension),
+				FileType:    fileType,
 				SortDate:    sortDate,
 				TargetDir:   targetDir,
 				WorkingDir:  workingDir,
@@ -52,6 +54,7 @@ func newSeparateCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&mode, "mode", string(organizer.ModeExtension), "How to separate files: extension, date, extension_and_date, file")
 	cmd.Flags().StringVar(&extension, "extension", "", "Extension to filter, e.g. .pdf or pdf")
+	cmd.Flags().StringVar(&fileType, "file-type", "", "File type filter for --mode file (e.g. documents, images, pdf)")
 	cmd.Flags().StringVar(&sortDate, "date", "", "Date in YYYY-MM-DD format")
 	cmd.Flags().StringVar(&targetDir, "target-dir", "", "Where separated files are moved")
 	cmd.Flags().StringVar(&workingDir, "working-dir", "", "Source directory to process")
