@@ -56,7 +56,7 @@ jobs:
               run: poetry run pyinstaller --onefile --name organizer-python-${{ matrix.label }} --paths src src/file_organiser_python/main.py
 
             - name: Upload Python build artifacts
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: python-cli-build-${{ matrix.label }}
                   path: file-organiser-python/dist/*
@@ -115,7 +115,7 @@ jobs:
                   go build -o dist/organizer-go-${{ matrix.label }}${{ matrix.ext }} .
 
             - name: Upload Go build artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: go-cli-build-${{ matrix.label }}
                   path: file-organiser-go/dist/*
