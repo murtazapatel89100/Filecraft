@@ -1,11 +1,9 @@
-# Default owner for the entire repository
-* @murtazapatel
+# CODEOWNERS
 
-# Python implementation
-/file-organiser-python/ @murtazapatel
+* @murtazapatel89100
 
-# Go implementation
-/file-organiser-go/ @murtazapatel
+/filecraft-python/ @murtazapatel89100
 
-# CI and release automation
-/.github/workflows/ @murtazapatel
+/filecraft-go/ @murtazapatel89100
+
+/.github/workflows/ @murtazapatel89100

@@ -1,13 +1,13 @@
 version: 2
 updates:
   - package-ecosystem: "pip"
-    directory: "/file-organiser-python"
+    directory: "/filecraft-python"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
 
   - package-ecosystem: "gomod"
-    directory: "/file-organiser-go"
+    directory: "/filecraft-go"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5

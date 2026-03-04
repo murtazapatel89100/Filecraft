@@ -1,6 +1,7 @@
-# Organizer CLI – Future Feature Roadmap
+# Filecraft – Future Feature Roadmap
 
 ## File Discovery
+
 - Recursive directory traversal
 - Include pattern filtering (`--include`)
 - Ignore pattern filtering (`--ignore`)
@@ -10,6 +11,7 @@
 - Depth limiting (`--max-depth`)
 
 ## Conflict Handling
+
 - `--conflict rename` (current default)
 - `--conflict overwrite`
 - `--conflict skip`
@@ -17,12 +19,14 @@
 - `--conflict prompt`
 
 ## File Type Detection
+
 - MIME-type detection
 - Smart file categorization
 - Extension normalization
 - File signature detection
 
 ## Sorting Enhancements
+
 - Sort by file size
 - Sort by creation time
 - Sort by modification time
@@ -31,12 +35,14 @@
 - Custom folder naming templates
 
 ## Automation
-- Watch mode (`organizer watch`)
+
+- Watch mode (`filecraft watch`)
 - Scheduled execution support
 - Continuous folder monitoring
 - Rule-based automation
 
 ## Config System
+
 - YAML config file support
 - JSON config support
 - Config validation
@@ -44,6 +50,7 @@
 - Config override via CLI flags
 
 ## Rule Engine
+
 - Multi-rule execution
 - Conditional rules
 - Rule priority system
@@ -51,6 +58,7 @@
 - Rule preview
 
 ## Safety Features
+
 - Operation confirmation prompt
 - Protected directory detection
 - Safe mode
@@ -59,6 +67,7 @@
 - Operation history viewer
 
 ## Output & UX
+
 - Colored terminal output
 - Progress bars
 - Verbose mode
@@ -68,6 +77,7 @@
 - Operation summary improvements
 
 ## Performance
+
 - Parallel file processing
 - Batch file operations
 - Optimized directory scanning
@@ -75,6 +85,7 @@
 - Large directory handling
 
 ## Duplicate Handling
+
 - Duplicate file detection
 - Hash-based duplicate detection
 - Duplicate removal
@@ -82,6 +93,7 @@
 - Duplicate reporting
 
 ## CLI Improvements
+
 - Shell autocompletion (bash/zsh/fish)
 - Interactive mode
 - Command aliases
@@ -89,19 +101,28 @@
 - Command suggestions
 
 ## Logging
+
 - File logging
 - Structured logs
 - Log levels
 - Operation logs
 
 ## Integration
-- Homebrew installation
+
+- Homebrew installation (planned for `Filecraft`)
 - Scoop installation
 - AUR package
 - Docker image
 - OS context menu integration
 
+## Distribution Channels
+
+- Publish `filecraft` to PyPI
+- Publish `Filecraft` binaries via GitHub Releases
+- Homebrew tap for `Filecraft` (future)
+
 ## Developer Features
+
 - Plugin system
 - Hook system
 - Custom rule extensions
@@ -109,12 +130,14 @@
 - API mode
 
 ## Reporting
+
 - File operation reports
 - Directory statistics
 - File distribution reports
 - Export reports (JSON/CSV)
 
 ## Long-term Features
+
 - Remote directory support
 - Cloud storage support
 - GUI companion tool

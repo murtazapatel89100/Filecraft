@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in organizer-cli
+description: Report a reproducible problem in Filecraft
 title: "[Bug]: "
 labels:
   - bug
@@ -14,8 +14,8 @@ body:
     attributes:
       label: Affected implementation
       options:
-        - file-organiser-python
-        - file-organiser-go
+        - Filecraft-python
+        - Filecraft-go
         - both
     validations:
       required: true

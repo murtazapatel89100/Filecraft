@@ -10,12 +10,12 @@ Please **do not** open public issues for suspected vulnerabilities.
 
 Instead, report privately by email:
 
-- **Contact:** murtazapatel89100@gmail.com
-- **Subject:** `[organizer-cli security] <short summary>`
+- **Contact:** [murtazapatel89100@gmail.com](mailto:murtazapatel89100@gmail.com)
+- **Subject:** `[filecraft security] <short summary>`
 
 Include the following details when possible:
 
-- affected implementation (`file-organiser-python`, `file-organiser-go`, or both)
+- affected implementation (`filecraft-python`, `filecraft-go`, or both)
 - affected version/tag
 - impact and attack scenario
 - reproduction steps or proof of concept

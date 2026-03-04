@@ -1,19 +1,19 @@
 # Architecture
 
-`organizer-cli` contains two CLI fronts with aligned behavior and separate language-specific internals.
+`Filecraft` contains two CLI fronts with aligned behavior and separate language-specific internals.
 
 ## Diagram
 
 ```mermaid
 flowchart TB
   subgraph Repo
-    subgraph Python[file-organiser-python]
+    subgraph Python[Filecraft-python]
       PYCLI[Typer Commands]
       PYCORE[organizer.py + operations.py]
       PYHIST[history.py]
     end
 
-    subgraph Go[file-organiser-go]
+    subgraph Go[Filecraft-go]
       GOCLI[Cobra Commands]
       GOCORE[internal/organizer]
       GOHIST[history.go]

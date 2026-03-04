@@ -1,9 +1,9 @@
 # Releases Guide
 
-This repository has two CLI implementations:
+This repository has two CLI implementations under the Filecraft app:
 
-- `file-organiser-python` (Typer)
-- `file-organiser-go` (Cobra)
+- Python implementation (Typer, PyPI distribution as `filecraft`)
+- Go implementation (Cobra, GitHub Releases binary as `Filecraft`)
 
 Releases are automated with GitHub Actions and are triggered by either:
 
@@ -16,13 +16,13 @@ Release workflow: `.github/workflows/release.yml`
 
 A release runs only when:
 
-1. Trigger source is one of:
+- Trigger source is one of:
   - push tag matching `v*` (for example `v1.2.3`), or
   - manual dispatch input `version` (for example `1.2.3` or `v1.2.3`)
-2. The resolved release version is valid semver (`vMAJOR.MINOR.PATCH`, optional pre-release/build suffix)
-3. The resolved version (without `v`) matches both:
-   - root `VERSION` file
-   - `file-organiser-python/pyproject.toml` `version`
+- The resolved release version is valid semver (`vMAJOR.MINOR.PATCH`, optional pre-release/build suffix)
+- The resolved version (without `v`) matches both:
+  - root `VERSION` file
+  - `filecraft-python/pyproject.toml` `version`
 
 If any check fails, release is stopped.
 
@@ -30,8 +30,10 @@ If any check fails, release is stopped.
 
 For each valid version:
 
-- Builds Python CLI executable using `PyInstaller`
-- Builds Go CLI binaries for:
+- Builds `Filecraft` Python CLI executable using `PyInstaller`
+- Builds Python package artifacts (`sdist` + `wheel`) for PyPI publication
+- Publishes to PyPI when `PYPI_API_TOKEN` is configured
+- Builds `Filecraft` Go binaries for:
   - Linux amd64
   - macOS amd64
   - Windows amd64 (`.exe`)
@@ -46,27 +48,27 @@ For each valid version:
 Update both files to the same version number (without `v`):
 
 - `VERSION`
-- `file-organiser-python/pyproject.toml` → `version = "x.y.z"`
+- `filecraft-python/pyproject.toml` → `version = "x.y.z"`
 
 Example (`1.2.0`):
 
 ```bash
 printf "1.2.0\n" > VERSION
-sed -i 's/^version = ".*"/version = "1.2.0"/' file-organiser-python/pyproject.toml
+sed -i 's/^version = ".*"/version = "1.2.0"/' filecraft-python/pyproject.toml
 ```
 
 ### 2) Run checks locally
 
 ```bash
 # Python
-cd file-organiser-python
+cd filecraft-python
 poetry install --with dev
 poetry run black --check src tests
 poetry run python -m unittest discover -s tests -p "test_*.py"
 cd ..
 
 # Go
-cd file-organiser-go
+cd filecraft-go
 gofmt -w .
 go vet ./...
 go test ./...
@@ -76,7 +78,7 @@ cd ..
 ### 3) Commit version change
 
 ```bash
-git add VERSION file-organiser-python/pyproject.toml
+git add VERSION filecraft-python/pyproject.toml
 git commit -m "chore(release): bump version to v1.2.0"
 git push origin main
 ```
@@ -103,7 +105,7 @@ Either option triggers the release workflow.
 - Keep semver format strict (`vX.Y.Z` preferred for normal releases).
 - Never edit workflow artifact names in one job without updating downstream download/publish steps.
 - Keep release artifacts deterministic:
-  - Python binary name includes version and platform
+  - Python binary includes version and platform
   - Go binaries include version and target platform
 - If release fails at validation, fix versions and push a new correct tag.
 

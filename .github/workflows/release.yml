@@ -1,4 +1,4 @@
-name: Release
+name: Filecraft Release
 
 on:
   push:
@@ -50,10 +50,10 @@ jobs:
 
           tag_version="${version#v}"
           root_version="$(tr -d '[:space:]' < VERSION)"
-          pyproject_version="$(grep -E '^version = ' file-organiser-python/pyproject.toml | sed -E 's/version = "([^"]+)"/\1/')"
+          pyproject_version="$(grep -E '^version = ' filecraft-python/pyproject.toml | sed -E 's/version = "([^"]+)"/\1/')"
 
           if [ -z "$root_version" ] || [ -z "$pyproject_version" ]; then
-            echo "Unable to read VERSION or file-organiser-python/pyproject.toml version"
+            echo "Unable to read VERSION or filecraft-python/pyproject.toml version"
             exit 1
           fi
 
@@ -63,14 +63,14 @@ jobs:
           fi
 
           if [ "$tag_version" != "$pyproject_version" ]; then
-            echo "Tag version ($tag_version) does not match file-organiser-python version ($pyproject_version)"
+            echo "Tag version ($tag_version) does not match filecraft-python version ($pyproject_version)"
             exit 1
           fi
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   python-release:
-    name: Python release (${{ matrix.label }})
+    name: Filecraft Python implementation release (${{ matrix.label }})
     runs-on: ${{ matrix.runs_on }}
     needs: prepare
     strategy:
@@ -85,7 +85,7 @@ jobs:
             label: windows-amd64
     defaults:
       run:
-        working-directory: file-organiser-python
+        working-directory: filecraft-python
         shell: bash
 
     steps:
@@ -107,18 +107,21 @@ jobs:
         run: |
           poetry run pyinstaller \
             --onefile \
-            --name organizer-python-${{ needs.prepare.outputs.version }}-${{ matrix.label }} \
+            --name Filecraft-${{ needs.prepare.outputs.version }}-${{ matrix.label }}-python \
             --paths src \
             src/file_organiser_python/main.py
 
-      - name: Upload Python release artifact
+      - name: Build Python package artifacts
+        run: poetry build
+
+      - name: Upload Filecraft Python release artifact
         uses: actions/upload-artifact@v7
         with:
-          name: python-release-${{ matrix.label }}
-          path: file-organiser-python/dist/*
+          name: filecraft-python-impl-release-${{ matrix.label }}
+          path: filecraft-python/dist/*
 
   go-release:
-    name: Go release (${{ matrix.label }})
+    name: Filecraft Go implementation release (${{ matrix.label }})
     runs-on: ${{ matrix.runs_on }}
     needs: prepare
     strategy:
@@ -136,7 +139,7 @@ jobs:
             ext: ".exe"
     defaults:
       run:
-        working-directory: file-organiser-go
+        working-directory: filecraft-go
         shell: bash
 
     steps:
@@ -146,22 +149,54 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: file-organiser-go/go.mod
+          go-version-file: filecraft-go/go.mod
 
       - name: Build Go binary
         run: |
           mkdir -p dist
-          output="dist/organizer-go-${{ needs.prepare.outputs.version }}-${{ matrix.label }}${{ matrix.ext }}"
+          output="dist/Filecraft-${{ needs.prepare.outputs.version }}-${{ matrix.label }}${{ matrix.ext }}"
           go build -o "$output" .
 
-      - name: Upload Go release artifact
+      - name: Upload Filecraft Go release artifact
         uses: actions/upload-artifact@v7
         with:
-          name: go-release-${{ matrix.label }}
-          path: file-organiser-go/dist/*
+          name: filecraft-go-impl-release-${{ matrix.label }}
+          path: filecraft-go/dist/*
+
+  publish-pypi:
+    name: Publish filecraft to PyPI
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - python-release
+    defaults:
+      run:
+        working-directory: filecraft-python
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Build sdist and wheel for PyPI
+        run: poetry build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: filecraft-python/dist/
 
   publish-release:
-    name: Publish GitHub release
+    name: Publish Filecraft GitHub release
     runs-on: ubuntu-latest
     needs:
       - prepare
@@ -178,7 +213,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.version }}
-          name: Release ${{ needs.prepare.outputs.version }}
+          name: Filecraft ${{ needs.prepare.outputs.version }}
           generate_release_notes: true
           files: |
             release-artifacts/**/*
