@@ -5,7 +5,8 @@ description = "A CLI organizer you didn’t know you needed — yet."
 authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = [
     "cli",
     "file-organizer",
