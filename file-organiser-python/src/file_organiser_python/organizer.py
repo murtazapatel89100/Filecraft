@@ -44,10 +44,10 @@ class FileOrganizer:
         file_type: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
-        if target_dir and not target_dir.exists():
+        if target_dir and not dry_run and not target_dir.exists():
             raise MissingTargetDirectoryError(target_dir)
 
-        if target_dir and not target_dir.is_dir():
+        if target_dir and not dry_run and not target_dir.is_dir():
             raise TargetPathNotDirectoryError(target_dir)
 
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()

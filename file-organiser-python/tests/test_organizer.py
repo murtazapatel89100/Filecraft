@@ -112,6 +112,13 @@ class TestOrganizerFixes(unittest.TestCase):
         with self.assertRaises(TargetPathNotDirectoryError):
             FileOrganizer(target_dir=target_file)
 
+    def test_file_organizer_allows_missing_target_dir_in_dry_run(self) -> None:
+        missing_target = self.base / "missing-target-dry"
+
+        organizer = FileOrganizer(target_dir=missing_target, dry_run=True)
+
+        self.assertEqual(organizer.target_dir, missing_target.resolve())
+
     def test_cli_missing_target_dir_create_option_creates_directory(self) -> None:
         missing_target = self.base / "missing-create"
 
@@ -148,6 +155,26 @@ class TestOrganizerFixes(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("Target directory does not exist", result.output)
+
+    def test_cli_dry_run_missing_target_dir_skips_prompt_and_creation(self) -> None:
+        missing_target = self.base / "missing-target-dry-cli"
+
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(missing_target),
+                "--dry-run",
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertFalse(missing_target.exists())
+        self.assertIn("[DRY RUN] Target directory does not exist", result.output)
+        self.assertNotIn("Create it?", result.output)
 
     def test_cli_validates_working_dir_before_target_dir_prompt(self) -> None:
         missing_target = self.base / "missing-target"

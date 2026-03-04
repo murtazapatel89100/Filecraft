@@ -27,7 +27,7 @@ func newMergeCmd() *cobra.Command {
 				return err
 			}
 
-			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout())
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), dryRun)
 			if err != nil {
 				return err
 			}

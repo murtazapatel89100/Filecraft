@@ -16,7 +16,10 @@ from file_organiser_python.utils import validate_directory
 app = typer.Typer()
 
 
-def _resolve_target_directory(target_dir: Optional[Path]) -> Optional[Path]:
+def _resolve_target_directory(
+    target_dir: Optional[Path],
+    dry_run: bool,
+) -> Optional[Path]:
     if not target_dir:
         return None
 
@@ -26,6 +29,10 @@ def _resolve_target_directory(target_dir: Optional[Path]) -> Optional[Path]:
                 f"Path is not a directory: {target_dir}",
                 param_hint="--target-dir",
             )
+        return target_dir
+
+    if dry_run:
+        typer.echo(f"[DRY RUN] Target directory does not exist: {target_dir}")
         return target_dir
 
     if typer.confirm(
@@ -97,7 +104,7 @@ def rename(
     history: bool = typer.Option(False, "--history", help="Save operation history."),
 ) -> None:
     _validate_optional_directory(working_dir, "--working-dir")
-    target_dir = _resolve_target_directory(target_dir)
+    target_dir = _resolve_target_directory(target_dir, dry_run=dry_run)
 
     try:
         organizer = FileOrganizer(
@@ -144,7 +151,7 @@ def separate(
 ) -> None:
     _validate_optional_directory(working_dir, "--working-dir")
     _validate_optional_iso_date(sort_date)
-    target_dir = _resolve_target_directory(target_dir)
+    target_dir = _resolve_target_directory(target_dir, dry_run=dry_run)
 
     normalized_extension = f".{extension.lstrip('.').lower()}" if extension else None
 
@@ -223,7 +230,7 @@ def merge(
 ) -> None:
     _validate_required_directories(working_dirs, "--working-dir")
     _validate_optional_iso_date(sort_date)
-    target_dir = _resolve_target_directory(target_dir)
+    target_dir = _resolve_target_directory(target_dir, dry_run=dry_run)
 
     normalized_extension = f".{extension.lstrip('.').lower()}" if extension else None
 

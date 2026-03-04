@@ -27,7 +27,7 @@ func validateOptionalDirectory(path string, optionName string) error {
 	return nil
 }
 
-func resolveTargetDir(path string, in io.Reader, out io.Writer) (string, error) {
+func resolveTargetDir(path string, in io.Reader, out io.Writer, dryRun bool) (string, error) {
 	if path == "" {
 		return path, nil
 	}
@@ -44,11 +44,16 @@ func resolveTargetDir(path string, in io.Reader, out io.Writer) (string, error) 
 		return "", fmt.Errorf("--target-dir: unable to access path %s: %w", path, err)
 	}
 
+	if dryRun {
+		fmt.Fprintf(out, "[DRY RUN] Target directory does not exist: %s\n", path)
+		return path, nil
+	}
+
 	fmt.Fprintf(out, "Target directory '%s' does not exist. Create it? [y/N]: ", path)
 	reader := bufio.NewReader(in)
 	inputChoice, readErr := reader.ReadString('\n')
 	if readErr != nil && readErr != io.EOF {
-		return "", readErr
+		return "", fmt.Errorf("--target-dir: unable to read confirmation: %w", readErr)
 	}
 
 	switch strings.ToLower(strings.TrimSpace(inputChoice)) {
