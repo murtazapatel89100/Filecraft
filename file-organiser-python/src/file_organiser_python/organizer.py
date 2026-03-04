@@ -32,7 +32,30 @@ class FileOrganizer:
         file_type: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
-        self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
+        try:
+            self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
+
+        except FileNotFoundError:
+            print(
+                f"Target directory '{target_dir}' does not exist. Do you want to create it? (1.) or default to current directory (2.): ",
+                end="",
+            )
+
+            input_choice = input().strip()
+
+            if input_choice == "1" and target_dir:
+                target_dir.mkdir(parents=True, exist_ok=True)
+                self.target_dir = target_dir.resolve()
+                print(f"Created target directory: {self.target_dir}")
+
+            elif input_choice == "2":
+                self.target_dir = Path.cwd()
+                print(f"Defaulting to current directory as target: {self.target_dir}")
+
+            else:
+                print("User response not recognized. Exiting.")
+                raise SystemExit(1)
+
         self.working_dir = working_dir.resolve() if working_dir else Path.cwd()
         self.working_dirs = (
             [path.resolve() for path in working_dirs]
