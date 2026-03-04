@@ -1,3 +1,28 @@
+## [1.0.2] - 2026-03-04
+
+### 📚 Documentation
+
+- Update banner image URLs and add demo video
+
+### ⚙️ Miscellaneous Tasks
+
+- Add dir level lisence for distribution
+- Add demo video assets
+- Release v1.0.2
+## [1.0.1] - 2026-03-04
+
+### 🐛 Bug Fixes
+
+- *(release)* Resolve PyPI publish and release asset conflicts
+
+### 📚 Documentation
+
+- Update project branding and python package metadata
+
+### ⚙️ Miscellaneous Tasks
+
+- Update CHANGELOG.md
+- Release v1.0.1
 ## [1.0.0] - 2026-03-04
 
 ### 🚀 Features
