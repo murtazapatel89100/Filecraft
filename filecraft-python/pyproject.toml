@@ -1,6 +1,6 @@
 [project]
 name = "filecraft"
-version = "0.3.0"
+version = "1.0.0"
 description = ""
 authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
 readme = "README.md"
