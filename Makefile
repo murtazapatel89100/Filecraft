@@ -20,7 +20,7 @@ release:
 	git commit -m "chore: release v$(VERSION)"
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin main
-	git push origin v$(VERSION)"
+	git push origin v$(VERSION)
 
 ci: python-lint python-test python-build go-lint go-test go-build
 
