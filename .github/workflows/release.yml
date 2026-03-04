@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   prepare:
@@ -111,13 +112,40 @@ jobs:
             --paths src \
             src/file_organiser_python/main.py
 
-      - name: Build Python package artifacts
-        run: poetry build
-
       - name: Upload Filecraft Python release artifact
         uses: actions/upload-artifact@v7
         with:
           name: filecraft-python-impl-release-${{ matrix.label }}
+          path: filecraft-python/dist/Filecraft-${{ needs.prepare.outputs.version }}-${{ matrix.label }}-python*
+
+  python-package-release:
+    name: Filecraft Python package release artifacts
+    runs-on: ubuntu-latest
+    needs: prepare
+    defaults:
+      run:
+        working-directory: filecraft-python
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Build Python package artifacts
+        run: poetry build
+
+      - name: Upload Python package release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: filecraft-python-package-release
           path: filecraft-python/dist/*
 
   go-release:
@@ -168,32 +196,19 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - prepare
-      - python-release
-    defaults:
-      run:
-        working-directory: filecraft-python
-        shell: bash
+      - python-package-release
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Download Python package artifacts
+        uses: actions/download-artifact@v8
         with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Build sdist and wheel for PyPI
-        run: poetry build
+          name: filecraft-python-package-release
+          path: dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          packages-dir: filecraft-python/dist/
+          packages-dir: dist/
 
   publish-release:
     name: Publish Filecraft GitHub release
@@ -201,6 +216,7 @@ jobs:
     needs:
       - prepare
       - python-release
+      - python-package-release
       - go-release
 
     steps:

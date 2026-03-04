@@ -2,7 +2,7 @@
 
 This repository has two CLI implementations under the Filecraft app:
 
-- Python implementation (Typer, PyPI distribution as `filecraft`)
+- Python implementation (Typer, PyPI distribution as `filecraft-cli`)
 - Go implementation (Cobra, GitHub Releases binary as `Filecraft`)
 
 Releases are automated with GitHub Actions and are triggered by either:
@@ -31,8 +31,8 @@ If any check fails, release is stopped.
 For each valid version:
 
 - Builds `Filecraft` Python CLI executable using `PyInstaller`
-- Builds Python package artifacts (`sdist` + `wheel`) for PyPI publication
-- Publishes to PyPI when `PYPI_API_TOKEN` is configured
+- Builds Python package artifacts (`sdist` + `wheel`) once for PyPI and GitHub Release assets
+- Publishes to PyPI via Trusted Publishing (OIDC)
 - Builds `Filecraft` Go binaries for:
   - Linux amd64
   - macOS amd64
@@ -98,6 +98,14 @@ Option B: run workflow manually from GitHub Actions UI
 - Input `version`: `1.2.0` or `v1.2.0`
 
 Either option triggers the release workflow.
+
+### 5) Configure PyPI Trusted Publisher (one-time)
+
+For `filecraft-cli`, add a PyPI Trusted Publisher that matches:
+
+- Owner: `murtazapatel89100`
+- Repository: `Filecraft`
+- Workflow filename: `release.yml`
 
 ## How Not to Break the Pattern
 

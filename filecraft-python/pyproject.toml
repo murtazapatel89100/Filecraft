@@ -1,5 +1,5 @@
 [project]
-name = "filecraft"
+name = "filecraft-cli"
 version = "1.0.0"
 description = ""
 authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]

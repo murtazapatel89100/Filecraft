@@ -10,7 +10,7 @@ This is the Python implementation of Filecraft, focused on safe and repeatable f
 
 ## Distribution
 
-- Package target: PyPI (`filecraft`)
+- Package target: PyPI (`filecraft-cli`)
 - CLI command: `filecraft`
 - Standalone binary: `Filecraft` (PyInstaller)
 
@@ -26,7 +26,7 @@ poetry run filecraft --help
 ### Option 2: PyPI install (release users)
 
 ```bash
-pip install filecraft
+pip install filecraft-cli
 filecraft --help
 ```
 

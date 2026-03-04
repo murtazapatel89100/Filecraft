@@ -117,7 +117,7 @@
 
 ## Distribution Channels
 
-- Publish `filecraft` to PyPI
+- Publish `filecraft-cli` to PyPI
 - Publish `Filecraft` binaries via GitHub Releases
 - Homebrew tap for `Filecraft` (future)
 

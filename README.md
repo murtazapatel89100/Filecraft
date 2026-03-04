@@ -20,7 +20,7 @@ Each implementation has its own README with install, usage examples, and command
 
 ## Distribution
 
-- `filecraft` (Python): published on PyPI.
+- `filecraft-cli` (Python): published on PyPI.
 - `Filecraft` (Go binary): published on GitHub Releases.
 - Homebrew support is planned for `Filecraft`.
 
@@ -97,7 +97,7 @@ To provide the same CLI behavior across two ecosystems while comparing developer
 
 ### Where are releases published?
 
-- `filecraft` package: PyPI
+- `filecraft-cli` package: PyPI
 - `Filecraft` binary: GitHub Releases
 - Homebrew: planned for `Filecraft`
 
