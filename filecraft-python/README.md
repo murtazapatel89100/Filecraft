@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://www.murtazapatel.dev/filecraft.png" width="900">
+  <img src="https://raw.githubusercontent.com/murtazapatel89100/Filecraft/main/assets/Filecraft-banner.png" width="900">
 </p>
 
 <h1 align="center">Filecraft</h1>
@@ -18,6 +18,12 @@ A CLI organizer you didn’t know you needed — yet.
 </p>
 
 This is the Python implementation of Filecraft, focused on safe and repeatable file organization workflows.
+
+## Demo
+
+Watch Filecraft in action:
+
+https://github.com/murtazapatel89100/Filecraft/blob/main/docs/filecraft-demo.mp4
 
 ## Requirements
 

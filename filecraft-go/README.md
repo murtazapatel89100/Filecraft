@@ -1,6 +1,6 @@
 # Filecraft (Go implementation)
 
-![Filecraft Banner](https://www.murtazapatel.dev/filecraft.png)
+![Filecraft Banner](https://raw.githubusercontent.com/murtazapatel89100/Filecraft/main/assets/Filecraft-banner.png)
 
 This is the Go implementation of Filecraft, optimized for standalone binary usage and GitHub Release delivery.
 
