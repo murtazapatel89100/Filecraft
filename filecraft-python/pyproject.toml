@@ -1,0 +1,21 @@
+[project]
+name = "filecraft"
+version = "0.3.0"
+description = ""
+authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+dependencies = ["typer (>=0.24.1,<0.25.0)"]
+
+[tool.poetry]
+packages = [{ include = "file_organiser_python", from = "src" }]
+
+[tool.poetry.scripts]
+filecraft = "file_organiser_python.main:app"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = ["black (>=26.1.0,<27.0.0)", "pyinstaller (==6.19.0)"]

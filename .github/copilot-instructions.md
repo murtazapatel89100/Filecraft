@@ -1,19 +1,19 @@
-# Copilot Guide for organizer-cli
+# Copilot Guide for Filecraft
 
-This repository contains two CLI implementations of the same file organizer behavior:
+This repository contains two CLI implementations of the same Filecraft behavior:
 
-- `file-organiser-python` (Typer + Poetry)
-- `file-organiser-go` (Cobra + Go modules)
+- `filecraft-python` (Typer + Poetry)
+- `filecraft-go` (Cobra + Go modules)
 
 Use this guide when making changes so behavior stays aligned across both implementations.
 
 ## Repository Layout
 
-- `file-organiser-python/`
-  - `src/file_organiser_python/`: Python CLI and core logic
+- `filecraft-python/`
+  - `src/file_organiser_python/`: Filecraft Python CLI and core logic
   - `tests/`: Python test suite (`unittest`)
   - `pyproject.toml`: single source of truth for Python dependencies/build metadata
-- `file-organiser-go/`
+- `filecraft-go/`
   - `cmd/`: Cobra commands
   - `internal/organizer/`: Go organizer logic
   - `go.mod`: Go dependencies and toolchain version
@@ -27,34 +27,37 @@ Use this guide when making changes so behavior stays aligned across both impleme
 
 1. Keep Python and Go command behavior compatible.
 2. Do not add ad-hoc dependencies in CI workflows.
-   - Python dependencies must be managed only via `file-organiser-python/pyproject.toml`.
+
+- Python dependencies must be managed only via `filecraft-python/pyproject.toml`.
+
 3. Release pipeline runs only on semantic version tags (`v*`).
 4. Release version must match all three:
    - tag without `v`
    - `VERSION`
-   - `file-organiser-python/pyproject.toml` version
+
+- `filecraft-python/pyproject.toml` version
 
 ## Local Dev Commands
 
 ### Python
 
 ```bash
-cd file-organiser-python
+cd filecraft-python
 poetry install --with dev --sync
 poetry run black --check src tests
 poetry run python -m unittest discover -s tests -p "test_*.py"
 poetry build
-poetry run pyinstaller --onefile --name organizer-python --paths src src/file_organiser_python/main.py
+poetry run pyinstaller --onefile --name Filecraft --paths src src/file_organiser_python/main.py
 ```
 
 ### Go
 
 ```bash
-cd file-organiser-go
+cd filecraft-go
 gofmt -w .
 go vet ./...
 go test ./...
-go build -o dist/organizer-go .
+go build -o dist/Filecraft .
 ```
 
 ## CI/Release Expectations
@@ -89,7 +92,7 @@ go build -o dist/organizer-go .
 ```bash
 # Example: release 1.2.0
 printf "1.2.0\n" > VERSION
-# update file-organiser-python/pyproject.toml version = "1.2.0"
+# update filecraft-python/pyproject.toml version = "1.2.0"
 
 git add VERSION file-organiser-python/pyproject.toml
 git commit -m "chore(release): bump version to v1.2.0"

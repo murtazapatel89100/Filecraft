@@ -1,10 +1,13 @@
-# organizer-cli
-File Organiser is a structured command-line tool for automating file management tasks such as separating files by extension, sequential renaming, and safely reverting file moves.
+# Filecraft
+
+![Filecraft Banner](assets/Filecraft-banner.png)
+
+Filecraft is a cross-language CLI suite for automating file management tasks such as sequential renaming, separation by rule, merging from multiple directories, and safe revert via history.
 
 ## Implementations
 
-- [file-organiser-python](file-organiser-python): Python implementation using Typer.
-- [file-organiser-go](file-organiser-go): Go implementation using Cobra.
+- [filecraft-python](filecraft-python): Python implementation (PyPI target).
+- [filecraft-go](filecraft-go): Go implementation (GitHub Releases target).
 
 Both implementations support:
 
@@ -15,21 +18,29 @@ Both implementations support:
 
 Each implementation has its own README with install, usage examples, and command options.
 
+## Distribution
+
+- `filecraft` (Python): published on PyPI.
+- `Filecraft` (Go binary): published on GitHub Releases.
+- Homebrew support is planned for `Filecraft`.
+
 ## Quick Start
 
 ### Python CLI
 
 ```bash
-cd file-organiser-python
+cd filecraft-python
 poetry install --with dev --sync
-poetry run organizer --help
+poetry run filecraft --help
 ```
 
 ### Go CLI
 
 ```bash
-cd file-organiser-go
+cd filecraft-go
 go run . --help
+go build -o Filecraft .
+./Filecraft --help
 ```
 
 ## Example Commands
@@ -37,19 +48,19 @@ go run . --help
 Python:
 
 ```bash
-poetry run organizer rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
-poetry run organizer separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
-poetry run organizer merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
-poetry run organizer revert --directory ./out
+poetry run filecraft rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
+poetry run filecraft separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
+poetry run filecraft merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
+poetry run filecraft revert --directory ./out
 ```
 
 Go:
 
 ```bash
-go run . rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
-go run . separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
-go run . merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
-go run . revert --directory ./out
+./Filecraft rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
+./Filecraft separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
+./Filecraft merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
+./Filecraft revert --directory ./out
 ```
 
 ## Architecture
@@ -58,13 +69,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed architecture d
 
 ```mermaid
 flowchart LR
-	CLI_PY["Python CLI (Typer)"] --> CORE["Organizer logic"]
-	CLI_GO["Go CLI (Cobra)"] --> CORE
-	CORE --> FS["Filesystem operations"]
-	CORE --> HIST["History files (.organizer_history_*.json)"]
-	CI["CI workflow"] --> CLI_PY
-	CI --> CLI_GO
-	REL["Release workflow"] --> BIN["Versioned release binaries"]
+  CLI_PY["Filecraft (Python / Typer)"] --> CORE["Organizer logic"]
+  CLI_GO["Filecraft (Go / Cobra)"] --> CORE
+  CORE --> FS["Filesystem operations"]
+  CORE --> HIST["History files (.organizer_history_*.json)"]
+  CI["CI workflow"] --> CLI_PY
+  CI --> CLI_GO
+  REL["Release workflow"] --> BIN["Versioned Filecraft artifacts"]
 ```
 
 ## Release Process
@@ -84,9 +95,15 @@ flowchart LR
 
 To provide the same CLI behavior across two ecosystems while comparing developer and runtime tradeoffs.
 
+### Where are releases published?
+
+- `filecraft` package: PyPI
+- `Filecraft` binary: GitHub Releases
+- Homebrew: planned for `Filecraft`
+
 ### Which version value is canonical for releases?
 
-The release version must match across git tag (without `v`), `VERSION`, and `file-organiser-python/pyproject.toml`.
+The release version must match across git tag (without `v`), `VERSION`, and `filecraft-python/pyproject.toml`.
 
 ### Where should command behavior changes be implemented?
 

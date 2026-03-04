@@ -1,11 +1,11 @@
 # Contributing
 
-Thanks for helping improve `organizer-cli`.
+Thanks for helping improve `Filecraft`.
 
 This repository contains two implementations of the same CLI behavior:
 
-- `file-organiser-python` (Typer)
-- `file-organiser-go` (Cobra)
+- `Filecraft-python` (`filecraft-python`, Typer)
+- `Filecraft-go` (`filecraft-go`, Cobra)
 
 ## Ground Rules
 
@@ -19,7 +19,7 @@ This repository contains two implementations of the same CLI behavior:
 ### Python
 
 ```bash
-cd file-organiser-python
+cd filecraft-python
 poetry install --with dev --sync
 poetry run black --check src tests
 poetry run python -m unittest discover -s tests -p "test_*.py"
@@ -29,11 +29,11 @@ poetry build
 ### Go
 
 ```bash
-cd file-organiser-go
+cd filecraft-go
 gofmt -w .
 go vet ./...
 go test ./...
-go build -o dist/organizer-go .
+go build -o dist/Filecraft .
 ```
 
 ## Pull Request Expectations
@@ -51,7 +51,7 @@ go build -o dist/organizer-go .
 - Version must match across:
   - git tag (without `v`)
   - `VERSION`
-  - `file-organiser-python/pyproject.toml`
+  - `filecraft-python/pyproject.toml`
 - See `docs/RELEASES.md` for the exact process.
 
 ## Reporting Issues

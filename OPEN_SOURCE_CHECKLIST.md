@@ -1,6 +1,6 @@
 # Open Source Repository Checklist (Tailored)
 
-This checklist is applied to `organizer-cli` as of 2026-03-03.
+This checklist is applied to `Filecraft` as of 2026-03-03.
 
 ## 🔥 Minimum Required
 
@@ -28,7 +28,7 @@ This checklist is applied to `organizer-cli` as of 2026-03-03.
 
 ## 🧪 Testing & Quality
 
-- [x] Tests directories (`file-organiser-python/tests`, Go tests in `file-organiser-go`)
+- [x] Tests directories (`filecraft-python/tests`, Go tests in `filecraft-go`) for `Filecraft-python` and `Filecraft-go`
 - [x] Coverage config (`.coveragerc`)
 - [x] Lint config (`.golangci.yml`, Black config usage in `pyproject.toml`)
 - [x] Pre-commit config (`.pre-commit-config.yaml`)

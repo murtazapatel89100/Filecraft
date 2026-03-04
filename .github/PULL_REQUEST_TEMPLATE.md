@@ -5,8 +5,8 @@
 
 ## Scope
 
-- [ ] Python implementation (`file-organiser-python`)
-- [ ] Go implementation (`file-organiser-go`)
+- [ ] Filecraft-python implementation (`filecraft-python`)
+- [ ] Filecraft-go implementation (`filecraft-go`)
 - [ ] Docs/CI only
 
 ## Compatibility Parity
@@ -32,7 +32,7 @@ Parity notes:
 ## Release Impact
 
 - [ ] No release impact
-- [ ] Version bump required (`VERSION` + `file-organiser-python/pyproject.toml`)
+- [ ] Version bump required (`VERSION` + `filecraft-python/pyproject.toml`)
 - [ ] Affects release artifacts/workflows
 
 ## Checklist

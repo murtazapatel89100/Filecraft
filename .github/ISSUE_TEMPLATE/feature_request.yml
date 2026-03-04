@@ -31,8 +31,8 @@ body:
     attributes:
       label: Expected implementation scope
       options:
-        - file-organiser-python only
-        - file-organiser-go only
+        - Filecraft-python only
+        - Filecraft-go only
         - both implementations
         - not sure
     validations:

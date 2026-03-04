@@ -1,0 +1,11 @@
+{
+  "venvPath": "filecraft-python",
+  "venv": ".venv",
+  "include": ["filecraft-python/src", "filecraft-python/tests"],
+  "executionEnvironments": [
+    {
+      "root": "filecraft-python",
+      "extraPaths": ["filecraft-python/src"]
+    }
+  ]
+}

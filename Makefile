@@ -15,8 +15,8 @@ help:
 
 release:
 	echo $(VERSION) > VERSION
-	cd file-organiser-python && poetry version $(VERSION)
-	git add VERSION file-organiser-python/pyproject.toml
+	cd filecraft-python && poetry version $(VERSION)
+	git add VERSION filecraft-python/pyproject.toml
 	git commit -m "chore: release v$(VERSION)"
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin main
@@ -25,25 +25,25 @@ release:
 ci: python-lint python-test python-build go-lint go-test go-build
 
 python-install:
-	cd file-organiser-python && poetry install --with dev --sync
+	cd filecraft-python && poetry install --with dev --sync
 
 python-lint:
-	cd file-organiser-python && poetry run black --check src tests
+	cd filecraft-python && poetry run black --check src tests
 
 python-test:
-	cd file-organiser-python && poetry run python -m unittest discover -s tests -p "test_*.py"
+	cd filecraft-python && poetry run python -m unittest discover -s tests -p "test_*.py"
 
 python-build:
-	cd file-organiser-python && poetry build
-	cd file-organiser-python && poetry run pyinstaller --onefile --name organizer-python --paths src src/file_organiser_python/main.py
+	cd filecraft-python && poetry build
+	cd filecraft-python && poetry run pyinstaller --onefile --name Filecraft --paths src src/file_organiser_python/main.py
 
 go-lint:
-	cd file-organiser-go && gofmt -w .
-	cd file-organiser-go && go vet ./...
+	cd filecraft-go && gofmt -w .
+	cd filecraft-go && go vet ./...
 
 go-test:
-	cd file-organiser-go && go test ./...
+	cd filecraft-go && go test ./...
 
 go-build:
-	mkdir -p file-organiser-go/dist
-	cd file-organiser-go && go build -o dist/organizer-go .
+	mkdir -p filecraft-go/dist
+	cd filecraft-go && go build -o dist/Filecraft .
