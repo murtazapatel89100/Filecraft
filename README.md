@@ -37,6 +37,7 @@ go run . --help
 Python:
 
 ```bash
+poetry run organizer rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
 poetry run organizer separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
 poetry run organizer merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
 poetry run organizer revert --directory ./out
@@ -45,6 +46,7 @@ poetry run organizer revert --directory ./out
 Go:
 
 ```bash
+go run . rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
 go run . separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
 go run . merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
 go run . revert --directory ./out

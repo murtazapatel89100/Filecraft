@@ -102,6 +102,11 @@ def rename(
     ),
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
+    renameWith: Optional[str] = typer.Option(
+        None,
+        "--rename-with",
+        help="Base name to use for renamed files (e.g. 'file' to get 'file_1.pdf', 'file_2.pdf', etc.).",
+    ),
 ) -> None:
     _validate_optional_directory(working_dir, "--working-dir")
     target_dir = _resolve_target_directory(target_dir, dry_run=dry_run)
@@ -112,6 +117,7 @@ def rename(
             working_dir=working_dir,
             dry_run=dry_run,
             save_history=history,
+            renameWith=renameWith,
         )
     except (MissingTargetDirectoryError, TargetPathNotDirectoryError) as exc:
         raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc

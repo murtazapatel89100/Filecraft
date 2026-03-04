@@ -21,6 +21,7 @@ type Config struct {
 	WorkingDirs []string
 	DryRun      bool
 	SaveHistory bool
+	RenameWith  string
 }
 
 type FileOrganizer struct {
@@ -34,6 +35,7 @@ type FileOrganizer struct {
 	dryRun      bool
 	saveHistory bool
 	historyPath string
+	renameWith  string
 }
 
 func NewFileOrganizer(cfg Config) (*FileOrganizer, error) {
@@ -90,6 +92,7 @@ func NewFileOrganizer(cfg Config) (*FileOrganizer, error) {
 		workingDirs: resolvedWorkingDirs,
 		dryRun:      cfg.DryRun,
 		saveHistory: cfg.SaveHistory,
+		renameWith:  cfg.RenameWith,
 	}
 
 	if fo.saveHistory {
@@ -128,6 +131,9 @@ func (f *FileOrganizer) Rename(out io.Writer) error {
 	for index, filePath := range files {
 		ext := filepath.Ext(filePath)
 		newName := fmt.Sprintf("%d%s", index+1, ext)
+		if f.renameWith != "" {
+			newName = fmt.Sprintf("%s_%d%s", f.renameWith, index+1, ext)
+		}
 		destinationPath := filepath.Join(f.targetDir, newName)
 		newPath := buildNonConflictingPath(destinationPath)
 

@@ -101,6 +101,33 @@ func TestRenameCollisionAndRevertRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRenameWithPrefixHandlesCollision(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work, "a.txt"), "a")
+	mustWriteFile(t, filepath.Join(work, "b.txt"), "b")
+	mustWriteFile(t, filepath.Join(out, "invoice_1.txt"), "existing")
+
+	fo, err := NewFileOrganizer(Config{TargetDir: out, WorkingDir: work, RenameWith: "invoice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Rename(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "invoice_1_1.txt")); err != nil {
+		t.Fatalf("expected collision-safe prefixed file: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "invoice_2.txt")); err != nil {
+		t.Fatalf("expected second prefixed file: %v", err)
+	}
+}
+
 func TestHistoryFilenameIsUniquePerRun(t *testing.T) {
 	base := t.TempDir()
 	out := filepath.Join(base, "out")
