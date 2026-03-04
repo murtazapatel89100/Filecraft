@@ -49,6 +49,26 @@ for ext in DISK_IMAGE_EXTENSIONS:
     EXTENSION_TYPE_MAP[ext] = "DISK_IMAGES"
 
 KNOWN_EXTENSIONS = set(EXTENSION_TYPE_MAP.keys())
+KNOWN_FILE_TYPES = set(EXTENSION_TYPE_MAP.values()) | {"OTHERS"}
+
+
+def _normalize_file_type(file_type: Optional[str]) -> Optional[tuple[str, str]]:
+    if not file_type:
+        return None
+
+    normalized_value = file_type.strip().lower()
+    if not normalized_value:
+        return None
+
+    normalized_extension = f".{normalized_value.lstrip('.')}"
+    if normalized_extension in KNOWN_EXTENSIONS:
+        return ("extension", normalized_extension)
+
+    normalized_type = normalized_value.upper().replace("-", "_").replace(" ", "_")
+    if normalized_type in KNOWN_FILE_TYPES:
+        return ("category", normalized_type)
+
+    return ("invalid", "")
 
 
 def _files_from_working_dirs(working_dirs: list[Path]) -> list[Path]:
@@ -237,11 +257,22 @@ def SeparateByExtensionAndDate(
 def SeparateByFileType(
     target_dir: Path,
     working_dir: Path,
+    file_type: Optional[str] = None,
     history: bool = False,
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
-    print(f"Separating all files by file type in {working_dir} -> {target_dir}")
+    selected_file_type = _normalize_file_type(file_type)
+    if selected_file_type and selected_file_type[0] == "invalid":
+        print(f"Unsupported file type filter '{file_type}'.")
+        return
+
+    if selected_file_type:
+        print(
+            f"Separating files with filter {file_type} in {working_dir} -> {target_dir}"
+        )
+    else:
+        print(f"Separating all files by file type in {working_dir} -> {target_dir}")
 
     files = [f for f in working_dir.iterdir() if f.is_file()]
     if not files:
@@ -251,9 +282,19 @@ def SeparateByFileType(
     revert_map: dict[str, str] = {}
     operation = "separate_by_file_type"
 
+    moved_files = 0
+
     for f in files:
         extension = get_extension(f, KNOWN_EXTENSIONS)
         folder_name = EXTENSION_TYPE_MAP.get(extension, "OTHERS")
+
+        if selected_file_type:
+            filter_kind, filter_value = selected_file_type
+            if filter_kind == "category" and folder_name != filter_value:
+                continue
+            if filter_kind == "extension" and extension != filter_value:
+                continue
+
         sorted_dir = target_dir / folder_name
 
         ensure_directory(sorted_dir, dry_run=dry_run)
@@ -269,6 +310,11 @@ def SeparateByFileType(
         print(f"Moving {f.name} -> {new_path}...")
         f.rename(new_path)
         revert_map[str(new_path.resolve())] = str(original_path)
+        moved_files += 1
+
+    if moved_files == 0:
+        print(f"No files found for file type '{file_type}' in {working_dir}.")
+        return
 
     if history and not dry_run:
         if not history_path:

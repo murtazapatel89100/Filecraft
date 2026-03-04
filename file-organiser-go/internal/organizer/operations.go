@@ -53,6 +53,31 @@ func selectFilesByDate(files []string, selectedDate time.Time) []string {
 	return selected
 }
 
+func normalizeFileTypeFilter(fileType string) (string, string, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(fileType))
+	if normalized == "" {
+		return "", "", true
+	}
+
+	normalizedExtension := "." + strings.TrimPrefix(normalized, ".")
+	if _, ok := extensionTypeMap[normalizedExtension]; ok {
+		return "extension", normalizedExtension, true
+	}
+
+	normalizedType := strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(normalized, "-", "_"), " ", "_"))
+	if normalizedType == "OTHERS" {
+		return "category", normalizedType, true
+	}
+
+	for _, folderName := range extensionTypeMap {
+		if folderName == normalizedType {
+			return "category", normalizedType, true
+		}
+	}
+
+	return "", "", false
+}
+
 func moveFiles(files []string, destinationDir string, dryRun bool, out io.Writer) (map[string]string, error) {
 	revertMap := map[string]string{}
 
@@ -221,7 +246,17 @@ func (f *FileOrganizer) separateByExtensionAndDate(out io.Writer) error {
 }
 
 func (f *FileOrganizer) separateByFileType(out io.Writer) error {
-	fmt.Fprintf(out, "Separating all files by file type in %s → %s\n", f.workingDir, f.targetDir)
+	filterKind, filterValue, isValid := normalizeFileTypeFilter(f.fileType)
+	if !isValid {
+		fmt.Fprintf(out, "Unsupported file type filter '%s'.\n", f.fileType)
+		return nil
+	}
+
+	if filterKind == "" {
+		fmt.Fprintf(out, "Separating all files by file type in %s → %s\n", f.workingDir, f.targetDir)
+	} else {
+		fmt.Fprintf(out, "Separating files with filter %s in %s → %s\n", f.fileType, f.workingDir, f.targetDir)
+	}
 
 	files, err := filesFromWorkingDirs([]string{f.workingDir})
 	if err != nil {
@@ -234,11 +269,19 @@ func (f *FileOrganizer) separateByFileType(out io.Writer) error {
 	}
 
 	revertMap := map[string]string{}
+	movedFiles := 0
 	for _, file := range files {
 		ext := getExtension(file, knownExtensions)
 		folderName := extensionTypeMap[ext]
 		if folderName == "" {
 			folderName = "OTHERS"
+		}
+
+		if filterKind == "category" && folderName != filterValue {
+			continue
+		}
+		if filterKind == "extension" && ext != filterValue {
+			continue
 		}
 
 		sortedDir := filepath.Join(f.targetDir, folderName)
@@ -254,6 +297,12 @@ func (f *FileOrganizer) separateByFileType(out io.Writer) error {
 		for k, v := range mapped {
 			revertMap[k] = v
 		}
+		movedFiles += len(mapped)
+	}
+
+	if movedFiles == 0 {
+		fmt.Fprintf(out, "No files found for file type '%s' in %s.\n", f.fileType, f.workingDir)
+		return nil
 	}
 
 	if f.saveHistory && !f.dryRun {

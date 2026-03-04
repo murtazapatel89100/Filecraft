@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -24,5 +26,86 @@ func TestSeparateInvalidDateReturnsError(t *testing.T) {
 
 	if !strings.Contains(strings.ToLower(err.Error()), "yyyy-mm-dd") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSeparateFileModeWithFileTypeCategoryFilter(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	if err := os.MkdirAll(work, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(work, "paper.pdf"), []byte("doc"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(work, "song.mp3"), []byte("audio"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := NewRootCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{
+		"separate",
+		"--mode", "file",
+		"--file-type", "documents",
+		"--working-dir", work,
+		"--target-dir", out,
+	})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("expected command to succeed, got: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "paper.pdf")); err != nil {
+		t.Fatalf("expected paper.pdf moved to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(work, "song.mp3")); err != nil {
+		t.Fatalf("expected song.mp3 unchanged: %v", err)
+	}
+}
+
+func TestSeparateFileModeWithInvalidFileTypeFilter(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	if err := os.MkdirAll(work, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(work, "paper.pdf"), []byte("doc"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := NewRootCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{
+		"separate",
+		"--mode", "file",
+		"--file-type", "not-a-type",
+		"--working-dir", work,
+		"--target-dir", out,
+	})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("expected command to succeed, got: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "Unsupported file type filter") {
+		t.Fatalf("expected unsupported file type message, got: %s", buf.String())
+	}
+	if _, err := os.Stat(filepath.Join(work, "paper.pdf")); err != nil {
+		t.Fatalf("expected paper.pdf unchanged: %v", err)
 	}
 }

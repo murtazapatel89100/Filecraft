@@ -13,6 +13,15 @@ help:
 	@echo "  make go-test"
 	@echo "  make go-build"
 
+release:
+	echo $(VERSION) > VERSION
+	cd file-organiser-python && poetry version $(VERSION)
+	git add VERSION file-organiser-python/pyproject.toml
+	git commit -m "chore: release v$(VERSION)"
+	git tag -a v$(VERSION) -m "Release v$(VERSION)"
+	git push origin main
+	git push origin v$(VERSION)"
+
 ci: python-lint python-test python-build go-lint go-test go-build
 
 python-install:

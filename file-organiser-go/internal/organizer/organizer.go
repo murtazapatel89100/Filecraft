@@ -15,6 +15,7 @@ type Config struct {
 	Mode        Mode
 	SortDate    string
 	SortExt     string
+	FileType    string
 	TargetDir   string
 	WorkingDir  string
 	WorkingDirs []string
@@ -26,6 +27,7 @@ type FileOrganizer struct {
 	mode        Mode
 	sortDate    string
 	sortExt     string
+	fileType    string
 	targetDir   string
 	workingDir  string
 	workingDirs []string
@@ -82,6 +84,7 @@ func NewFileOrganizer(cfg Config) (*FileOrganizer, error) {
 		mode:        mode,
 		sortDate:    cfg.SortDate,
 		sortExt:     strings.ToLower(cfg.SortExt),
+		fileType:    cfg.FileType,
 		targetDir:   resolvedTarget,
 		workingDir:  resolvedWorking,
 		workingDirs: resolvedWorkingDirs,

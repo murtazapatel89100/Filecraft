@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -287,5 +288,97 @@ func TestMergeFileTypeFromMultipleWorkingDirs(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "paper.pdf")); err != nil {
 		t.Fatalf("expected pdf file merged to DOCUMENTS: %v", err)
+	}
+}
+
+func TestSeparateFileTypeWithCategoryFilter(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work, "paper.pdf"), "doc")
+	mustWriteFile(t, filepath.Join(work, "song.mp3"), "audio")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  out,
+		WorkingDir: work,
+		Mode:       ModeFile,
+		FileType:   "documents",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Separate(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "paper.pdf")); err != nil {
+		t.Fatalf("expected pdf moved to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(work, "song.mp3")); err != nil {
+		t.Fatalf("expected song.mp3 to remain in work dir: %v", err)
+	}
+}
+
+func TestSeparateFileTypeWithExtensionFilter(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work, "invoice.pdf"), "doc")
+	mustWriteFile(t, filepath.Join(work, "notes.txt"), "txt")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  out,
+		WorkingDir: work,
+		Mode:       ModeFile,
+		FileType:   "pdf",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Separate(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "invoice.pdf")); err != nil {
+		t.Fatalf("expected invoice.pdf moved to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(work, "notes.txt")); err != nil {
+		t.Fatalf("expected notes.txt to remain in work dir: %v", err)
+	}
+}
+
+func TestSeparateFileTypeWithInvalidFilter(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work, "paper.pdf"), "doc")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  out,
+		WorkingDir: work,
+		Mode:       ModeFile,
+		FileType:   "not-a-type",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Separate(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(work, "paper.pdf")); err != nil {
+		t.Fatalf("expected paper.pdf to remain in work dir: %v", err)
+	}
+	if !strings.Contains(outBuf.String(), "Unsupported file type filter") {
+		t.Fatalf("expected unsupported file type message, got: %s", outBuf.String())
 	}
 }
