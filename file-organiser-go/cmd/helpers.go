@@ -27,7 +27,7 @@ func validateOptionalDirectory(path string, optionName string) error {
 	return nil
 }
 
-func resolveTargetDir(path string, in io.Reader, out io.Writer, getwd func() (string, error)) (string, error) {
+func resolveTargetDir(path string, in io.Reader, out io.Writer) (string, error) {
 	if path == "" {
 		return path, nil
 	}
@@ -41,33 +41,31 @@ func resolveTargetDir(path string, in io.Reader, out io.Writer, getwd func() (st
 	}
 
 	if !os.IsNotExist(err) {
-		return "", err
+		return "", fmt.Errorf("--target-dir: unable to access path %s: %w", path, err)
 	}
 
-	fmt.Fprintf(out, "Target directory '%s' does not exist. Do you want to create it? (1.) or default to current directory (2.): ", path)
+	fmt.Fprintf(out, "Target directory '%s' does not exist. Create it? [y/N]: ", path)
 	reader := bufio.NewReader(in)
 	inputChoice, readErr := reader.ReadString('\n')
 	if readErr != nil && readErr != io.EOF {
 		return "", readErr
 	}
 
-	switch strings.TrimSpace(inputChoice) {
-	case "1":
+	switch strings.ToLower(strings.TrimSpace(inputChoice)) {
+	case "y", "yes":
 		if err := os.MkdirAll(path, 0o755); err != nil {
-			return "", err
+			return "", fmt.Errorf("--target-dir: unable to create directory %s: %w", path, err)
 		}
 		fmt.Fprintf(out, "Created target directory: %s\n", path)
 		return path, nil
-	case "2":
-		cwd, cwdErr := getwd()
-		if cwdErr != nil {
-			return "", cwdErr
-		}
-		fmt.Fprintf(out, "Defaulting to current directory as target: %s\n", cwd)
-		return cwd, nil
+	case "", "n", "no":
+		return "", fmt.Errorf("--target-dir: directory does not exist: %s", path)
 	default:
-		fmt.Fprintln(out, "User response not recognized. Exiting.")
-		return "", errors.New("user response not recognized")
+		return "", fmt.Errorf(
+			"--target-dir: directory does not exist: %s (unrecognized response: %q)",
+			path,
+			strings.TrimSpace(inputChoice),
+		)
 	}
 }
 

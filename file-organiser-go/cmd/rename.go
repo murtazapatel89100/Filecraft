@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"file-organiser-go/internal/organizer"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -17,12 +16,12 @@ func newRenameCmd() *cobra.Command {
 		Use:   "rename",
 		Short: "Rename files sequentially",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), os.Getwd)
-			if err != nil {
+			if err := validateOptionalDirectory(workingDir, "--working-dir"); err != nil {
 				return err
 			}
 
-			if err := validateOptionalDirectory(workingDir, "--working-dir"); err != nil {
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout())
+			if err != nil {
 				return err
 			}
 

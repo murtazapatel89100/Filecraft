@@ -29,6 +29,7 @@ go build -o organizer .
 - `organizer revert`
 
 All commands support `--dry-run` to preview actions without moving files.
+Working directory flags are validated before any `--target-dir` creation prompt.
 
 ## `rename`
 
@@ -40,6 +41,9 @@ Renames files in `working_dir` to numeric names (`1.ext`, `2.ext`, ...) and move
 - `--target-dir PATH` (default: current directory)
 - `--dry-run`
 - `--history` (save history file for revert)
+
+If `--target-dir` is provided and does not exist, the CLI prompts to create it (`y/n`).
+Declining exits with a `--target-dir` error.
 
 ### Example
 

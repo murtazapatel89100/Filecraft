@@ -25,6 +25,12 @@ class MissingTargetDirectoryError(FileNotFoundError):
         self.path = path
 
 
+class TargetPathNotDirectoryError(NotADirectoryError):
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"Target path is not a directory: {path}")
+        self.path = path
+
+
 class FileOrganizer:
     def __init__(
         self,
@@ -40,6 +46,9 @@ class FileOrganizer:
     ) -> None:
         if target_dir and not target_dir.exists():
             raise MissingTargetDirectoryError(target_dir)
+
+        if target_dir and not target_dir.is_dir():
+            raise TargetPathNotDirectoryError(target_dir)
 
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
 

@@ -12,10 +12,10 @@ func TestResolveTargetDirMissingCreateOptionCreatesDirectory(t *testing.T) {
 	base := t.TempDir()
 	target := filepath.Join(base, "missing-create")
 
-	in := strings.NewReader("1\n")
+	in := strings.NewReader("y\n")
 	out := &bytes.Buffer{}
 
-	resolved, err := resolveTargetDir(target, in, out, os.Getwd)
+	resolved, err := resolveTargetDir(target, in, out)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -36,44 +36,40 @@ func TestResolveTargetDirMissingCreateOptionCreatesDirectory(t *testing.T) {
 	}
 }
 
-func TestResolveTargetDirMissingDefaultOptionUsesCurrentDirectory(t *testing.T) {
+func TestResolveTargetDirMissingDeclineReturnsTargetDirError(t *testing.T) {
 	base := t.TempDir()
-	target := filepath.Join(base, "missing-default")
-	fakeCwd := filepath.Join(base, "cwd")
+	target := filepath.Join(base, "missing-decline")
 
-	in := strings.NewReader("2\n")
+	in := strings.NewReader("n\n")
 	out := &bytes.Buffer{}
 
-	resolved, err := resolveTargetDir(target, in, out, func() (string, error) {
-		return fakeCwd, nil
-	})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+	_, err := resolveTargetDir(target, in, out)
+	if err == nil {
+		t.Fatal("expected error when user declines target directory creation")
 	}
-
-	if resolved != fakeCwd {
-		t.Fatalf("expected resolved target %s, got %s", fakeCwd, resolved)
+	if !strings.Contains(err.Error(), "--target-dir: directory does not exist") {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out.String(), "Defaulting to current directory as target") {
-		t.Fatalf("expected defaulting message, got: %s", out.String())
+	if strings.Contains(out.String(), "Defaulting to current directory as target") {
+		t.Fatalf("did not expect defaulting message, got: %s", out.String())
 	}
 }
 
-func TestResolveTargetDirMissingInvalidInputReturnsError(t *testing.T) {
+func TestResolveTargetDirMissingInvalidInputReturnsTargetDirError(t *testing.T) {
 	base := t.TempDir()
 	target := filepath.Join(base, "missing-invalid")
 
 	in := strings.NewReader("x\n")
 	out := &bytes.Buffer{}
 
-	_, err := resolveTargetDir(target, in, out, os.Getwd)
+	_, err := resolveTargetDir(target, in, out)
 	if err == nil {
 		t.Fatal("expected error for invalid user input")
 	}
-	if !strings.Contains(err.Error(), "user response not recognized") {
+	if !strings.Contains(err.Error(), "--target-dir: directory does not exist") {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(out.String(), "User response not recognized. Exiting.") {
-		t.Fatalf("expected exit message, got: %s", out.String())
+	if !strings.Contains(err.Error(), target) {
+		t.Fatalf("expected path in error, got: %v", err)
 	}
 }

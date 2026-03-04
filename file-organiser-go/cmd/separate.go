@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"file-organiser-go/internal/organizer"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -21,16 +20,16 @@ func newSeparateCmd() *cobra.Command {
 		Use:   "separate",
 		Short: "Separate files by mode",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), os.Getwd)
-			if err != nil {
-				return err
-			}
-
 			if err := validateOptionalDirectory(workingDir, "--working-dir"); err != nil {
 				return err
 			}
 
 			if err := validateOptionalISODate(sortDate); err != nil {
+				return err
+			}
+
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout())
+			if err != nil {
 				return err
 			}
 
