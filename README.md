@@ -4,11 +4,6 @@
 
 Filecraft is a cross-language CLI suite for automating file management tasks such as sequential renaming, separation by rule, merging from multiple directories, and safe revert via history.
 
-## Demo
-
-<video src="https://raw.githubusercontent.com/murtazapatel89100/Filecraft/main/assets/demo-video.mp4" controls width="800"></video>
-
-
 ## Implementations
 
 - [filecraft-python](filecraft-python): Python implementation (PyPI target).

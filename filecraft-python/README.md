@@ -23,7 +23,7 @@ This is the Python implementation of Filecraft, focused on safe and repeatable f
 
 Watch Filecraft in action:
 
-https://github.com/murtazapatel89100/Filecraft
+https://github.com/murtazapatel89100/Filecraft/blob/main/assets/demo-video.mp4
 
 ## Requirements
 
