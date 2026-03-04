@@ -1,8 +1,14 @@
-## [unreleased]
+## [0.3.0] - 2026-03-04
+
+### 🚀 Features
+
+- Handle missing target directory with user prompt (#7)
 
 ### ⚙️ Miscellaneous Tasks
 
 - Fix malformed version in makefile
+- Add git cliff to auto-gen CHANGELOG.md file
+- Release v0.3.0
 ## [0.2.0] - 2026-03-04
 
 ### 🚀 Features
