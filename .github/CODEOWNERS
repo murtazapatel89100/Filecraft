@@ -1,9 +1,9 @@
 # CODEOWNERS
 
-* @murtazapatel
+* @murtazapatel89100
 
-/filecraft-python/ @murtazapatel
+/filecraft-python/ @murtazapatel89100
 
-/filecraft-go/ @murtazapatel
+/filecraft-go/ @murtazapatel89100
 
-/.github/workflows/ @murtazapatel
+/.github/workflows/ @murtazapatel89100
