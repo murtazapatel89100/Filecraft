@@ -19,6 +19,12 @@ from file_organiser_python.operations import (
 from file_organiser_python.utils import build_non_conflicting_path
 
 
+class MissingTargetDirectoryError(FileNotFoundError):
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"Target directory does not exist: {path}")
+        self.path = path
+
+
 class FileOrganizer:
     def __init__(
         self,
@@ -32,29 +38,10 @@ class FileOrganizer:
         file_type: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
-        try:
-            self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
+        if target_dir and not target_dir.exists():
+            raise MissingTargetDirectoryError(target_dir)
 
-        except FileNotFoundError:
-            print(
-                f"Target directory '{target_dir}' does not exist. Do you want to create it? (1.) or default to current directory (2.): ",
-                end="",
-            )
-
-            input_choice = input().strip()
-
-            if input_choice == "1" and target_dir:
-                target_dir.mkdir(parents=True, exist_ok=True)
-                self.target_dir = target_dir.resolve()
-                print(f"Created target directory: {self.target_dir}")
-
-            elif input_choice == "2":
-                self.target_dir = Path.cwd()
-                print(f"Defaulting to current directory as target: {self.target_dir}")
-
-            else:
-                print("User response not recognized. Exiting.")
-                raise SystemExit(1)
+        self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
 
         self.working_dir = working_dir.resolve() if working_dir else Path.cwd()
         self.working_dirs = (

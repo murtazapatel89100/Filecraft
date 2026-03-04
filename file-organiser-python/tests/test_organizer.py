@@ -4,14 +4,13 @@ import unittest
 import os
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
 
 from typer.testing import CliRunner
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from file_organiser_python.main import app
-from file_organiser_python.organizer import FileOrganizer
+from file_organiser_python.organizer import FileOrganizer, MissingTargetDirectoryError
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.history import revert_history
 
@@ -96,64 +95,48 @@ class TestOrganizerFixes(unittest.TestCase):
         assert history_path_2 is not None
         self.assertNotEqual(history_path_1.name, history_path_2.name)
 
-    def test_target_dir_missing_create_option_creates_directory(self) -> None:
+    def test_file_organizer_raises_for_missing_target_dir(self) -> None:
+        missing_target = self.base / "missing-target"
+
+        with self.assertRaises(MissingTargetDirectoryError):
+            FileOrganizer(target_dir=missing_target)
+
+    def test_cli_missing_target_dir_create_option_creates_directory(self) -> None:
         missing_target = self.base / "missing-create"
-        original_resolve = Path.resolve
 
-        def resolve_with_missing_failure(path: Path, *args, **kwargs) -> Path:
-            if path == missing_target and not missing_target.exists():
-                raise FileNotFoundError("missing target")
-            return original_resolve(path, *args, **kwargs)
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(missing_target),
+            ],
+            input="y\n",
+        )
 
-        with patch(
-            "file_organiser_python.organizer.Path.resolve",
-            autospec=True,
-            side_effect=resolve_with_missing_failure,
-        ):
-            with patch("builtins.input", return_value="1"):
-                organizer = FileOrganizer(target_dir=missing_target)
-
+        self.assertEqual(result.exit_code, 0)
         self.assertTrue(missing_target.exists())
-        self.assertEqual(organizer.target_dir, missing_target.resolve())
+        self.assertIn("Created target directory", result.output)
 
-    def test_target_dir_missing_default_option_uses_cwd(self) -> None:
-        missing_target = self.base / "missing-default"
-        original_resolve = Path.resolve
+    def test_cli_missing_target_dir_rejects_when_user_declines_options(self) -> None:
+        missing_target = self.base / "missing-reject"
 
-        def resolve_with_missing_failure(path: Path, *args, **kwargs) -> Path:
-            if path == missing_target:
-                raise FileNotFoundError("missing target")
-            return original_resolve(path, *args, **kwargs)
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(missing_target),
+            ],
+            input="n\n",
+        )
 
-        with patch(
-            "file_organiser_python.organizer.Path.resolve",
-            autospec=True,
-            side_effect=resolve_with_missing_failure,
-        ):
-            with patch("builtins.input", return_value="2"):
-                organizer = FileOrganizer(target_dir=missing_target)
-
-        self.assertEqual(organizer.target_dir, Path.cwd())
-
-    def test_target_dir_missing_invalid_input_exits(self) -> None:
-        missing_target = self.base / "missing-invalid"
-        original_resolve = Path.resolve
-
-        def resolve_with_missing_failure(path: Path, *args, **kwargs) -> Path:
-            if path == missing_target:
-                raise FileNotFoundError("missing target")
-            return original_resolve(path, *args, **kwargs)
-
-        with patch(
-            "file_organiser_python.organizer.Path.resolve",
-            autospec=True,
-            side_effect=resolve_with_missing_failure,
-        ):
-            with patch("builtins.input", return_value="x"):
-                with self.assertRaises(SystemExit) as context:
-                    FileOrganizer(target_dir=missing_target)
-
-        self.assertEqual(context.exception.code, 1)
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Target directory does not exist", result.output)
 
     def test_merge_extension_from_multiple_working_dirs(self) -> None:
         (self.work / "a.pdf").write_text("a", encoding="utf-8")

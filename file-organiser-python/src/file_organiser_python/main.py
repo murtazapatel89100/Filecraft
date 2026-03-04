@@ -6,7 +6,7 @@ import typer
 
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.history import revert_history
-from file_organiser_python.organizer import FileOrganizer
+from file_organiser_python.organizer import FileOrganizer, MissingTargetDirectoryError
 from file_organiser_python.utils import validate_directory
 
 app = typer.Typer()
@@ -20,6 +20,38 @@ def _validate_optional_directory(path: Optional[Path], option_name: str) -> None
         validate_directory(path)
     except ValueError as exc:
         raise typer.BadParameter(str(exc), param_hint=option_name) from exc
+
+
+def _resolve_target_directory(target_dir: Optional[Path]) -> Optional[Path]:
+    if not target_dir:
+        return None
+
+    if target_dir.exists():
+        if not target_dir.is_dir():
+            raise typer.BadParameter(
+                f"Path is not a directory: {target_dir}",
+                param_hint="--target-dir",
+            )
+        return target_dir
+
+    if typer.confirm(
+        f"Target directory '{target_dir}' does not exist. Create it?",
+        default=True,
+    ):
+        try:
+            target_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise typer.BadParameter(
+                f"Unable to create target directory: {target_dir}",
+                param_hint="--target-dir",
+            ) from exc
+        typer.echo(f"Created target directory: {target_dir.resolve()}")
+        return target_dir
+
+    raise typer.BadParameter(
+        f"Target directory does not exist: {target_dir}",
+        param_hint="--target-dir",
+    )
 
 
 def _validate_optional_iso_date(sort_date: Optional[str]) -> None:
@@ -60,15 +92,18 @@ def rename(
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
 ) -> None:
-    _validate_optional_directory(target_dir, "--target-dir")
+    target_dir = _resolve_target_directory(target_dir)
     _validate_optional_directory(working_dir, "--working-dir")
 
-    organizer = FileOrganizer(
-        target_dir=target_dir,
-        working_dir=working_dir,
-        dry_run=dry_run,
-        save_history=history,
-    )
+    try:
+        organizer = FileOrganizer(
+            target_dir=target_dir,
+            working_dir=working_dir,
+            dry_run=dry_run,
+            save_history=history,
+        )
+    except MissingTargetDirectoryError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
     organizer.rename()
 
 
@@ -103,22 +138,25 @@ def separate(
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
 ) -> None:
-    _validate_optional_directory(target_dir, "--target-dir")
+    target_dir = _resolve_target_directory(target_dir)
     _validate_optional_directory(working_dir, "--working-dir")
     _validate_optional_iso_date(sort_date)
 
     normalized_extension = f".{extension.lstrip('.').lower()}" if extension else None
 
-    organizer = FileOrganizer(
-        target_dir=target_dir,
-        working_dir=working_dir,
-        dry_run=dry_run,
-        save_history=history,
-        sort_date=sort_date,
-        sort_extension=normalized_extension,
-        file_type=file_type,
-        separate_choice=mode,
-    )
+    try:
+        organizer = FileOrganizer(
+            target_dir=target_dir,
+            working_dir=working_dir,
+            dry_run=dry_run,
+            save_history=history,
+            sort_date=sort_date,
+            sort_extension=normalized_extension,
+            file_type=file_type,
+            separate_choice=mode,
+        )
+    except MissingTargetDirectoryError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
     organizer.separate()
 
 
@@ -179,21 +217,24 @@ def merge(
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
 ) -> None:
-    _validate_optional_directory(target_dir, "--target-dir")
+    target_dir = _resolve_target_directory(target_dir)
     _validate_required_directories(working_dirs, "--working-dir")
     _validate_optional_iso_date(sort_date)
 
     normalized_extension = f".{extension.lstrip('.').lower()}" if extension else None
 
-    organizer = FileOrganizer(
-        target_dir=target_dir,
-        working_dirs=working_dirs,
-        dry_run=dry_run,
-        save_history=history,
-        sort_date=sort_date,
-        sort_extension=normalized_extension,
-        separate_choice=mode,
-    )
+    try:
+        organizer = FileOrganizer(
+            target_dir=target_dir,
+            working_dirs=working_dirs,
+            dry_run=dry_run,
+            save_history=history,
+            sort_date=sort_date,
+            sort_extension=normalized_extension,
+            separate_choice=mode,
+        )
+    except MissingTargetDirectoryError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
     organizer.merge()
 
 
