@@ -19,7 +19,7 @@ flowchart TB
       GOHIST[history.go]
     end
 
-    SHARED[Behavior parity contract\n(rename/separate/merge/revert)]
+    SHARED["Behavior parity contract<br/>rename / separate / merge / revert"]
     FS[(Filesystem)]
     HIST[(History JSON files)]
   end
