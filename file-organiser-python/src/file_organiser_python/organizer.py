@@ -41,6 +41,7 @@ class FileOrganizer:
         save_history: bool = False,
         sort_date: Optional[str] = None,
         sort_extension: Optional[str] = None,
+        renameWith: Optional[str] = None,
         file_type: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
@@ -62,6 +63,7 @@ class FileOrganizer:
         self.save_history = save_history
         self.sort_date = sort_date
         self.sort_extension = sort_extension
+        self.renameWith = renameWith
         self.file_type = file_type
         self.separate_choice = separate_choice
         self.history_path: Optional[Path] = None
@@ -83,8 +85,13 @@ class FileOrganizer:
         rename_map: dict[str, str] = {}
 
         for index, file in enumerate(sorted(files), start=1):
-            new_name = f"{index}{file.suffix}"
+            if self.renameWith:
+                new_name = f"{self.renameWith}_{index}{file.suffix}"
+            else:
+                new_name = f"{index}{file.suffix}"
+
             destination_path = self.target_dir / new_name
+
             new_path = build_non_conflicting_path(destination_path)
 
             original_path = file.resolve()

@@ -33,7 +33,8 @@ Working directory flags are validated before any `--target-dir` creation prompt.
 
 ## `rename`
 
-Renames files in `working_dir` to numeric names (`1.ext`, `2.ext`, ...) and moves them to `target_dir`.
+Renames files in `working_dir` and moves them to `target_dir`.
+By default names are numeric (`1.ext`, `2.ext`, ...); with `--rename-with` they become prefixed (`name_1.ext`, `name_2.ext`, ...).
 
 ### Options
 
@@ -41,6 +42,7 @@ Renames files in `working_dir` to numeric names (`1.ext`, `2.ext`, ...) and move
 - `--target-dir PATH` (default: current directory)
 - `--dry-run`
 - `--history` (save history file for revert)
+- `--rename-with TEXT` (optional base name prefix, e.g. `invoice`)
 
 If `--target-dir` is provided and does not exist, the CLI prompts to create it (`y/n`).
 Declining exits with a `--target-dir` error.
@@ -49,6 +51,7 @@ Declining exits with a `--target-dir` error.
 
 ```bash
 go run . rename --working-dir ./downloads --target-dir ./renamed --history
+go run . rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
 ```
 
 ## `separate`

@@ -87,6 +87,21 @@ class TestOrganizerFixes(unittest.TestCase):
         self.assertFalse((self.out / "1_1.txt").exists())
         self.assertFalse(history_path.exists())
 
+    def test_renameWith_prefix_handles_collision(self) -> None:
+        (self.work / "a.txt").write_text("a", encoding="utf-8")
+        (self.work / "b.txt").write_text("b", encoding="utf-8")
+        (self.out / "invoice_1.txt").write_text("existing", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dir=self.work,
+            renameWith="invoice",
+        )
+        organizer.rename()
+
+        self.assertTrue((self.out / "invoice_1_1.txt").exists())
+        self.assertTrue((self.out / "invoice_2.txt").exists())
+
     def test_history_filename_is_unique_per_run(self) -> None:
         organizer1 = FileOrganizer(target_dir=self.out, save_history=True)
         organizer2 = FileOrganizer(target_dir=self.out, save_history=True)
