@@ -1,6 +1,6 @@
 # Filecraft
 
-![Filecraft Banner](assets/Filecraft-banner.png)
+![Filecraft Banner](https://www.murtazapatel.dev/filecraft.png)
 
 Filecraft is a cross-language CLI suite for automating file management tasks such as sequential renaming, separation by rule, merging from multiple directories, and safe revert via history.
 

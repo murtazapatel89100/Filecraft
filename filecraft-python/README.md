@@ -1,6 +1,21 @@
-# Filecraft (Python implementation)
+<p align="center">
+  <img src="https://www.murtazapatel.dev/filecraft.png" width="900">
+</p>
 
-![Filecraft Banner](../assets/Filecraft-banner.png)
+<h1 align="center">Filecraft</h1>
+
+<p align="center">
+A CLI organizer you didn’t know you needed — yet.
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/filecraft-cli/">
+    <img src="https://img.shields.io/pypi/v/filecraft-cli">
+  </a>
+  <img src="https://img.shields.io/pypi/pyversions/filecraft-cli">
+  <img src="https://img.shields.io/github/license/murtazapatel89100/Filecraft">
+  <img src="https://img.shields.io/pypi/dm/filecraft-cli">
+</p>
 
 This is the Python implementation of Filecraft, focused on safe and repeatable file organization workflows.
 
