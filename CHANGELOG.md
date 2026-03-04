@@ -1,23 +1,50 @@
-# Changelog
+## [unreleased]
 
-All notable changes to this project are documented in this file.
+### ⚙️ Miscellaneous Tasks
 
-The format is based on Keep a Changelog and this project uses Semantic Versioning.
+- Fix malformed version in makefile
+## [0.2.0] - 2026-03-04
 
-## [Unreleased]
+### 🚀 Features
 
-### Added
+- Add --file-type filter for separate mode file in Go and Python
+- Add makefile command for releasing new versions
 
-- Open source community and governance baseline (`CONTRIBUTING`, `CODE_OF_CONDUCT`, issue/PR templates, `SECURITY`, `CODEOWNERS`)
-- Repository maintenance and quality automation configs (`Makefile`, Dependabot, pre-commit, coverage/lint configs)
-- Repo-level architecture and FAQ documentation
+### 📚 Documentation
 
-## [0.1.0]
+- Expand README and add project governance/maintenance files
 
-### Added
+### ⚙️ Miscellaneous Tasks
 
-- Initial dual implementation structure:
-  - `file-organiser-python` (Typer)
-  - `file-organiser-go` (Cobra)
-- Core commands: `rename`, `separate`, `merge`, `revert`
-- CI and release workflows
+- *(release)* Add manual workflow_dispatch trigger
+- Fix yml formatiing
+- Fix architecture diagram error
+- Release v0.2.0
+## [0.1.0] - 2026-03-02
+
+### 🚀 Features
+
+- Implement file renaming with numeric prefixes and history tracking
+- Add file extension constants and separate method placeholder
+- Add separation logic and update FileOrganizer
+- Add date separation functionality and placeholders for future features
+- Implement full CLI functionality for rename, separate, and revert
+- Add merge command to organize files from multiple source directories
+
+### 🐛 Bug Fixes
+
+- Adjust Python version and dependencies
+- Update Python version constraints for dependency compatibility
+- *(python)* Make Windows-safe output and unique history filenames
+
+### 🎨 Styling
+
+- Format Python code with black
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove unused history logic
+- Add release automation, copilot guide, and upgrade Cobra to v1.10.2
+- Init CI/release workflows and version tracking
+- Normalize line endings across platforms
+- Remove windows conflicting terminal commads
