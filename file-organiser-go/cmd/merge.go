@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"file-organiser-go/internal/organizer"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,8 @@ func newMergeCmd() *cobra.Command {
 		Use:   "merge",
 		Short: "Merge files from multiple working directories",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateOptionalDirectory(targetDir, "--target-dir"); err != nil {
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), os.Getwd)
+			if err != nil {
 				return err
 			}
 
@@ -35,7 +37,7 @@ func newMergeCmd() *cobra.Command {
 				Mode:        organizer.Mode(mode),
 				SortExt:     normalizeExtension(extension),
 				SortDate:    sortDate,
-				TargetDir:   targetDir,
+				TargetDir:   resolvedTargetDir,
 				WorkingDirs: workingDirs,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,

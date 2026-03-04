@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -23,6 +25,50 @@ func validateOptionalDirectory(path string, optionName string) error {
 	}
 
 	return nil
+}
+
+func resolveTargetDir(path string, in io.Reader, out io.Writer, getwd func() (string, error)) (string, error) {
+	if path == "" {
+		return path, nil
+	}
+
+	info, err := os.Stat(path)
+	if err == nil {
+		if !info.IsDir() {
+			return "", fmt.Errorf("--target-dir: path is not a directory: %s", path)
+		}
+		return path, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	fmt.Fprintf(out, "Target directory '%s' does not exist. Do you want to create it? (1.) or default to current directory (2.): ", path)
+	reader := bufio.NewReader(in)
+	inputChoice, readErr := reader.ReadString('\n')
+	if readErr != nil && readErr != io.EOF {
+		return "", readErr
+	}
+
+	switch strings.TrimSpace(inputChoice) {
+	case "1":
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return "", err
+		}
+		fmt.Fprintf(out, "Created target directory: %s\n", path)
+		return path, nil
+	case "2":
+		cwd, cwdErr := getwd()
+		if cwdErr != nil {
+			return "", cwdErr
+		}
+		fmt.Fprintf(out, "Defaulting to current directory as target: %s\n", cwd)
+		return cwd, nil
+	default:
+		fmt.Fprintln(out, "User response not recognized. Exiting.")
+		return "", errors.New("user response not recognized")
+	}
 }
 
 func validateRequiredDirectories(paths []string, optionName string) error {
