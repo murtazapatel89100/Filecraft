@@ -1,3 +1,14 @@
+## [1.0.0] - 2026-03-04
+
+### 🚀 Features
+
+- Add --rename-with option to rename command in Go and Python (#8)
+- *(rebrand)* Migrate to filecraft folders and align CI/release/docs (#9)
+
+### ⚙️ Miscellaneous Tasks
+
+- Update changelog
+- Release v1.0.0
 ## [0.3.0] - 2026-03-04
 
 ### 🚀 Features
