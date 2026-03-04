@@ -56,13 +56,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed architecture d
 
 ```mermaid
 flowchart LR
-	CLI_PY[Python CLI (Typer)] --> CORE[Organizer logic]
-	CLI_GO[Go CLI (Cobra)] --> CORE
-	CORE --> FS[Filesystem operations]
-	CORE --> HIST[History files (.organizer_history_*.json)]
-	CI[CI workflow] --> CLI_PY
+	CLI_PY["Python CLI (Typer)"] --> CORE["Organizer logic"]
+	CLI_GO["Go CLI (Cobra)"] --> CORE
+	CORE --> FS["Filesystem operations"]
+	CORE --> HIST["History files (.organizer_history_*.json)"]
+	CI["CI workflow"] --> CLI_PY
 	CI --> CLI_GO
-	REL[Release workflow] --> BIN[Versioned release binaries]
+	REL["Release workflow"] --> BIN["Versioned release binaries"]
 ```
 
 ## Release Process
