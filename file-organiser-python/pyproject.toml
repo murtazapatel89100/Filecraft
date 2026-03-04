@@ -1,6 +1,6 @@
 [project]
 name = "file-organiser-python"
-version = "0.2.0"
+version = "0.3.0"
 description = ""
 authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
 readme = "README.md"
