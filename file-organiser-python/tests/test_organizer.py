@@ -10,7 +10,11 @@ from typer.testing import CliRunner
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from file_organiser_python.main import app
-from file_organiser_python.organizer import FileOrganizer
+from file_organiser_python.organizer import (
+    FileOrganizer,
+    MissingTargetDirectoryError,
+    TargetPathNotDirectoryError,
+)
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.history import revert_history
 
@@ -94,6 +98,103 @@ class TestOrganizerFixes(unittest.TestCase):
         assert history_path_1 is not None
         assert history_path_2 is not None
         self.assertNotEqual(history_path_1.name, history_path_2.name)
+
+    def test_file_organizer_raises_for_missing_target_dir(self) -> None:
+        missing_target = self.base / "missing-target"
+
+        with self.assertRaises(MissingTargetDirectoryError):
+            FileOrganizer(target_dir=missing_target)
+
+    def test_file_organizer_raises_for_non_directory_target_path(self) -> None:
+        target_file = self.base / "target.txt"
+        target_file.write_text("x", encoding="utf-8")
+
+        with self.assertRaises(TargetPathNotDirectoryError):
+            FileOrganizer(target_dir=target_file)
+
+    def test_file_organizer_allows_missing_target_dir_in_dry_run(self) -> None:
+        missing_target = self.base / "missing-target-dry"
+
+        organizer = FileOrganizer(target_dir=missing_target, dry_run=True)
+
+        self.assertEqual(organizer.target_dir, missing_target.resolve())
+
+    def test_cli_missing_target_dir_create_option_creates_directory(self) -> None:
+        missing_target = self.base / "missing-create"
+
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(missing_target),
+            ],
+            input="y\n",
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(missing_target.exists())
+        self.assertIn("Created target directory", result.output)
+
+    def test_cli_missing_target_dir_rejects_when_user_declines_options(self) -> None:
+        missing_target = self.base / "missing-reject"
+
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(missing_target),
+            ],
+            input="n\n",
+        )
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Target directory does not exist", result.output)
+
+    def test_cli_dry_run_missing_target_dir_skips_prompt_and_creation(self) -> None:
+        missing_target = self.base / "missing-target-dry-cli"
+
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(missing_target),
+                "--dry-run",
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertFalse(missing_target.exists())
+        self.assertIn("[DRY RUN] Target directory does not exist", result.output)
+        self.assertNotIn("Create it?", result.output)
+
+    def test_cli_validates_working_dir_before_target_dir_prompt(self) -> None:
+        missing_target = self.base / "missing-target"
+        invalid_working_dir = self.base / "missing-work"
+
+        result = self.runner.invoke(
+            app,
+            [
+                "rename",
+                "--working-dir",
+                str(invalid_working_dir),
+                "--target-dir",
+                str(missing_target),
+            ],
+            input="y\n",
+        )
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Directory does not exist", result.output)
+        self.assertNotIn("Create it?", result.output)
 
     def test_merge_extension_from_multiple_working_dirs(self) -> None:
         (self.work / "a.pdf").write_text("a", encoding="utf-8")

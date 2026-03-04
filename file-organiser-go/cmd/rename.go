@@ -16,16 +16,17 @@ func newRenameCmd() *cobra.Command {
 		Use:   "rename",
 		Short: "Rename files sequentially",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateOptionalDirectory(targetDir, "--target-dir"); err != nil {
-				return err
-			}
-
 			if err := validateOptionalDirectory(workingDir, "--working-dir"); err != nil {
 				return err
 			}
 
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), dryRun)
+			if err != nil {
+				return err
+			}
+
 			cfg := organizer.Config{
-				TargetDir:   targetDir,
+				TargetDir:   resolvedTargetDir,
 				WorkingDir:  workingDir,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,

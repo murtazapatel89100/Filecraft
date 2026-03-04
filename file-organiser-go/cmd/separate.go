@@ -20,10 +20,6 @@ func newSeparateCmd() *cobra.Command {
 		Use:   "separate",
 		Short: "Separate files by mode",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateOptionalDirectory(targetDir, "--target-dir"); err != nil {
-				return err
-			}
-
 			if err := validateOptionalDirectory(workingDir, "--working-dir"); err != nil {
 				return err
 			}
@@ -32,12 +28,17 @@ func newSeparateCmd() *cobra.Command {
 				return err
 			}
 
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), dryRun)
+			if err != nil {
+				return err
+			}
+
 			cfg := organizer.Config{
 				Mode:        organizer.Mode(mode),
 				SortExt:     normalizeExtension(extension),
 				FileType:    fileType,
 				SortDate:    sortDate,
-				TargetDir:   targetDir,
+				TargetDir:   resolvedTargetDir,
 				WorkingDir:  workingDir,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,

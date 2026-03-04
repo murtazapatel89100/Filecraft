@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -23,6 +25,53 @@ func validateOptionalDirectory(path string, optionName string) error {
 	}
 
 	return nil
+}
+
+func resolveTargetDir(path string, in io.Reader, out io.Writer, dryRun bool) (string, error) {
+	if path == "" {
+		return path, nil
+	}
+
+	info, err := os.Stat(path)
+	if err == nil {
+		if !info.IsDir() {
+			return "", fmt.Errorf("--target-dir: path is not a directory: %s", path)
+		}
+		return path, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return "", fmt.Errorf("--target-dir: unable to access path %s: %w", path, err)
+	}
+
+	if dryRun {
+		fmt.Fprintf(out, "[DRY RUN] Target directory does not exist: %s\n", path)
+		return path, nil
+	}
+
+	fmt.Fprintf(out, "Target directory '%s' does not exist. Create it? [y/N]: ", path)
+	reader := bufio.NewReader(in)
+	inputChoice, readErr := reader.ReadString('\n')
+	if readErr != nil && readErr != io.EOF {
+		return "", fmt.Errorf("--target-dir: unable to read confirmation: %w", readErr)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(inputChoice)) {
+	case "y", "yes":
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return "", fmt.Errorf("--target-dir: unable to create directory %s: %w", path, err)
+		}
+		fmt.Fprintf(out, "Created target directory: %s\n", path)
+		return path, nil
+	case "", "n", "no":
+		return "", fmt.Errorf("--target-dir: directory does not exist: %s", path)
+	default:
+		return "", fmt.Errorf(
+			"--target-dir: directory does not exist: %s (unrecognized response: %q)",
+			path,
+			strings.TrimSpace(inputChoice),
+		)
+	}
 }
 
 func validateRequiredDirectories(paths []string, optionName string) error {

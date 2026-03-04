@@ -109,3 +109,32 @@ func TestSeparateFileModeWithInvalidFileTypeFilter(t *testing.T) {
 		t.Fatalf("expected paper.pdf unchanged: %v", err)
 	}
 }
+
+func TestSeparateValidatesWorkingDirBeforeTargetPrompt(t *testing.T) {
+	base := t.TempDir()
+	target := filepath.Join(base, "missing-target")
+	invalidWorking := filepath.Join(base, "missing-work")
+
+	root := NewRootCmd()
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetIn(strings.NewReader("y\n"))
+	root.SetArgs([]string{
+		"separate",
+		"--mode", "file",
+		"--working-dir", invalidWorking,
+		"--target-dir", target,
+	})
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected command to fail")
+	}
+	if !strings.Contains(err.Error(), "--working-dir: directory does not exist") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(buf.String(), "Target directory '") {
+		t.Fatalf("did not expect target prompt output, got: %s", buf.String())
+	}
+}

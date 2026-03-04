@@ -19,6 +19,18 @@ from file_organiser_python.operations import (
 from file_organiser_python.utils import build_non_conflicting_path
 
 
+class MissingTargetDirectoryError(FileNotFoundError):
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"Target directory does not exist: {path}")
+        self.path = path
+
+
+class TargetPathNotDirectoryError(NotADirectoryError):
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"Target path is not a directory: {path}")
+        self.path = path
+
+
 class FileOrganizer:
     def __init__(
         self,
@@ -32,7 +44,14 @@ class FileOrganizer:
         file_type: Optional[str] = None,
         separate_choice: Optional[SeparateChoices] = SeparateChoices.EXTENSION,
     ) -> None:
+        if target_dir and not dry_run and not target_dir.exists():
+            raise MissingTargetDirectoryError(target_dir)
+
+        if target_dir and not dry_run and not target_dir.is_dir():
+            raise TargetPathNotDirectoryError(target_dir)
+
         self.target_dir = target_dir.resolve() if target_dir else Path.cwd()
+
         self.working_dir = working_dir.resolve() if working_dir else Path.cwd()
         self.working_dirs = (
             [path.resolve() for path in working_dirs]

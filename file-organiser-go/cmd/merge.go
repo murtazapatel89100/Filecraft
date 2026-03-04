@@ -19,10 +19,6 @@ func newMergeCmd() *cobra.Command {
 		Use:   "merge",
 		Short: "Merge files from multiple working directories",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateOptionalDirectory(targetDir, "--target-dir"); err != nil {
-				return err
-			}
-
 			if err := validateRequiredDirectories(workingDirs, "--working-dir"); err != nil {
 				return err
 			}
@@ -31,11 +27,16 @@ func newMergeCmd() *cobra.Command {
 				return err
 			}
 
+			resolvedTargetDir, err := resolveTargetDir(targetDir, cmd.InOrStdin(), cmd.OutOrStdout(), dryRun)
+			if err != nil {
+				return err
+			}
+
 			cfg := organizer.Config{
 				Mode:        organizer.Mode(mode),
 				SortExt:     normalizeExtension(extension),
 				SortDate:    sortDate,
-				TargetDir:   targetDir,
+				TargetDir:   resolvedTargetDir,
 				WorkingDirs: workingDirs,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,
