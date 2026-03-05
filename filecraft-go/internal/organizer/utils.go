@@ -60,10 +60,28 @@ func getExtension(path string, known []string) string {
 	return strings.ToLower(filepath.Ext(name))
 }
 
-func filesFromWorkingDirs(dirs []string) ([]string, error) {
+func filesFromWorkingDirs(dirs []string, recursive bool) ([]string, error) {
 	files := make([]string, 0)
 
 	for _, dir := range dirs {
+		if recursive {
+			err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
+				if walkErr != nil {
+					return walkErr
+				}
+
+				if entry.Type().IsRegular() {
+					files = append(files, path)
+				}
+
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			return nil, err

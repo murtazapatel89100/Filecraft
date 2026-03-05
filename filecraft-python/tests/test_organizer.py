@@ -370,6 +370,87 @@ class TestOrganizerFixes(unittest.TestCase):
         self.assertIn("Unsupported file type filter", result.output)
         self.assertTrue((self.work / "paper.pdf").exists())
 
+    def test_separate_extension_recursive_finds_nested_files(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("pdf", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dir=self.work,
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.separate()
+
+        self.assertTrue((self.out / "PDF" / "doc.pdf").exists())
+
+    def test_separate_extension_non_recursive_ignores_nested_files(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("pdf", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dir=self.work,
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+        )
+        organizer.separate()
+
+        self.assertFalse((self.out / "PDF" / "doc.pdf").exists())
+        self.assertTrue((nested / "doc.pdf").exists())
+
+    def test_merge_recursive_across_multiple_working_dirs(self) -> None:
+        nested_one = self.work / "a"
+        nested_two = self.work2 / "b"
+        nested_one.mkdir(parents=True, exist_ok=True)
+        nested_two.mkdir(parents=True, exist_ok=True)
+
+        (nested_one / "one.pdf").write_text("1", encoding="utf-8")
+        (nested_two / "two.pdf").write_text("2", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / "PDF" / "one.pdf").exists())
+        self.assertTrue((self.out / "PDF" / "two.pdf").exists())
+
+    def test_separate_recursive_dry_run_does_not_move_files(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        file_path = nested / "dry.pdf"
+        file_path.write_text("pdf", encoding="utf-8")
+
+        result = self.runner.invoke(
+            app,
+            [
+                "separate",
+                "--mode",
+                "extension",
+                "--extension",
+                "pdf",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(self.out),
+                "--recursive",
+                "--dry-run",
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("[DRY RUN] Would move", result.output)
+        self.assertTrue(file_path.exists())
+        self.assertFalse((self.out / "PDF" / "dry.pdf").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

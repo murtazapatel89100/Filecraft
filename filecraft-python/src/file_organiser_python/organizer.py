@@ -37,6 +37,7 @@ class FileOrganizer:
         target_dir: Optional[Path] = None,
         working_dir: Optional[Path] = None,
         working_dirs: Optional[list[Path]] = None,
+        recursive: bool = False,
         dry_run: bool = False,
         save_history: bool = False,
         sort_date: Optional[str] = None,
@@ -59,6 +60,7 @@ class FileOrganizer:
             if working_dirs
             else [self.working_dir]
         )
+        self.recursive = recursive
         self.dry_run = dry_run
         self.save_history = save_history
         self.sort_date = sort_date
@@ -76,7 +78,10 @@ class FileOrganizer:
             self.history_path = build_non_conflicting_path(candidate_history_path)
 
     def rename(self) -> None:
-        files = [f for f in self.working_dir.iterdir() if f.is_file()]
+        if self.recursive:
+            files = [f for f in self.working_dir.rglob("*") if f.is_file()]
+        else:
+            files = [f for f in self.working_dir.iterdir() if f.is_file()]
 
         if not files:
             print("No files found in the working directory.")
@@ -118,6 +123,7 @@ class FileOrganizer:
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path if self.save_history else None,
                     dry_run=self.dry_run,
@@ -128,6 +134,7 @@ class FileOrganizer:
                     sort_date=self.sort_date,
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path,
                 )
@@ -141,6 +148,7 @@ class FileOrganizer:
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path,
                     dry_run=self.dry_run,
@@ -149,6 +157,7 @@ class FileOrganizer:
                 SeparateByFileType(
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
+                    recursive=self.recursive,
                     file_type=self.file_type,
                     history=self.save_history,
                     history_path=self.history_path,
@@ -172,6 +181,7 @@ class FileOrganizer:
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path if self.save_history else None,
                     dry_run=self.dry_run,
@@ -181,6 +191,7 @@ class FileOrganizer:
                     sort_date=self.sort_date,
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path,
                     dry_run=self.dry_run,
@@ -195,6 +206,7 @@ class FileOrganizer:
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path,
                     dry_run=self.dry_run,
@@ -203,6 +215,7 @@ class FileOrganizer:
                 MergeByFileType(
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
+                    recursive=self.recursive,
                     history=self.save_history,
                     history_path=self.history_path,
                     dry_run=self.dry_run,

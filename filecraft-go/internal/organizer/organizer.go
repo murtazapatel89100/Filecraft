@@ -19,6 +19,7 @@ type Config struct {
 	TargetDir   string
 	WorkingDir  string
 	WorkingDirs []string
+	Recursive   bool
 	DryRun      bool
 	SaveHistory bool
 	RenameWith  string
@@ -32,6 +33,7 @@ type FileOrganizer struct {
 	targetDir   string
 	workingDir  string
 	workingDirs []string
+	recursive   bool
 	dryRun      bool
 	saveHistory bool
 	historyPath string
@@ -90,6 +92,7 @@ func NewFileOrganizer(cfg Config) (*FileOrganizer, error) {
 		targetDir:   resolvedTarget,
 		workingDir:  resolvedWorking,
 		workingDirs: resolvedWorkingDirs,
+		recursive:   cfg.Recursive,
 		dryRun:      cfg.DryRun,
 		saveHistory: cfg.SaveHistory,
 		renameWith:  cfg.RenameWith,
@@ -106,16 +109,9 @@ func NewFileOrganizer(cfg Config) (*FileOrganizer, error) {
 }
 
 func (f *FileOrganizer) Rename(out io.Writer) error {
-	entries, err := os.ReadDir(f.workingDir)
+	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive)
 	if err != nil {
 		return err
-	}
-
-	files := make([]string, 0)
-	for _, entry := range entries {
-		if entry.Type().IsRegular() {
-			files = append(files, filepath.Join(f.workingDir, entry.Name()))
-		}
 	}
 
 	if len(files) == 0 {

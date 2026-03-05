@@ -12,6 +12,7 @@ func newRenameCmd() *cobra.Command {
 	var dryRun bool
 	var saveHistory bool
 	var renameWith string
+	var recursive bool
 
 	cmd := &cobra.Command{
 		Use:   "rename",
@@ -29,6 +30,7 @@ func newRenameCmd() *cobra.Command {
 			cfg := organizer.Config{
 				TargetDir:   resolvedTargetDir,
 				WorkingDir:  workingDir,
+				Recursive:   recursive,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,
 				RenameWith:  renameWith,
@@ -45,6 +47,7 @@ func newRenameCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&targetDir, "target-dir", "", "Where renamed files are moved")
 	cmd.Flags().StringVar(&workingDir, "working-dir", "", "Source directory to process")
+	cmd.Flags().BoolVar(&recursive, "recursive", false, "Recursively include files from all subdirectories")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview actions without making changes")
 	cmd.Flags().BoolVar(&saveHistory, "history", false, "Save operation history")
 	cmd.Flags().StringVar(&renameWith, "rename-with", "", "Rename files with a prefix or suffix")

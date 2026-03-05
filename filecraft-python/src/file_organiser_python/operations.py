@@ -71,10 +71,15 @@ def _normalize_file_type(file_type: Optional[str]) -> Optional[tuple[str, str]]:
     return ("invalid", "")
 
 
-def _files_from_working_dirs(working_dirs: list[Path]) -> list[Path]:
+def _files_from_working_dirs(
+    working_dirs: list[Path], recursive: bool = False
+) -> list[Path]:
     files: list[Path] = []
     for working_dir in working_dirs:
-        files.extend([f for f in working_dir.iterdir() if f.is_file()])
+        if recursive:
+            files.extend([f for f in working_dir.rglob("*") if f.is_file()])
+        else:
+            files.extend([f for f in working_dir.iterdir() if f.is_file()])
     return files
 
 
@@ -82,6 +87,7 @@ def SeparateByExtension(
     extension: str,
     target_dir: Path,
     working_dir: Path,
+    recursive: bool,
     history_path: Optional[Path],
     history: bool = False,
     dry_run: bool = False,
@@ -100,7 +106,7 @@ def SeparateByExtension(
 
     files = [
         f
-        for f in working_dir.iterdir()
+        for f in _files_from_working_dirs([working_dir], recursive=recursive)
         if f.is_file() and get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
     ]
     if not files:
@@ -133,6 +139,7 @@ def SeparateByDate(
     sort_date: Optional[str],
     target_dir: Path,
     working_dir: Path,
+    recursive: bool,
     history: bool,
     history_path: Optional[Path],
     dry_run: bool,
@@ -156,7 +163,7 @@ def SeparateByDate(
     target_date = date.fromisoformat(sort_date) if sort_date else date.today()
     files = [
         f
-        for f in working_dir.iterdir()
+        for f in _files_from_working_dirs([working_dir], recursive=recursive)
         if f.is_file()
         and datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
     ]
@@ -194,6 +201,7 @@ def SeparateByExtensionAndDate(
     extension: str,
     target_dir: Path,
     working_dir: Path,
+    recursive: bool,
     history: bool = False,
     history_path: Optional[Path] = None,
     dry_run: bool = False,
@@ -214,7 +222,7 @@ def SeparateByExtensionAndDate(
 
     files = [
         f
-        for f in working_dir.iterdir()
+        for f in _files_from_working_dirs([working_dir], recursive=recursive)
         if f.is_file()
         and get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
         and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
@@ -257,6 +265,7 @@ def SeparateByExtensionAndDate(
 def SeparateByFileType(
     target_dir: Path,
     working_dir: Path,
+    recursive: bool,
     file_type: Optional[str] = None,
     history: bool = False,
     history_path: Optional[Path] = None,
@@ -274,7 +283,7 @@ def SeparateByFileType(
     else:
         print(f"Separating all files by file type in {working_dir} -> {target_dir}")
 
-    files = [f for f in working_dir.iterdir() if f.is_file()]
+    files = _files_from_working_dirs([working_dir], recursive=recursive)
     if not files:
         print(f"No files found in {working_dir}.")
         return
@@ -332,6 +341,7 @@ def MergeByExtension(
     extension: str,
     target_dir: Path,
     working_dirs: list[Path],
+    recursive: bool,
     history_path: Optional[Path],
     history: bool = False,
     dry_run: bool = False,
@@ -348,7 +358,7 @@ def MergeByExtension(
 
     files = [
         f
-        for f in _files_from_working_dirs(working_dirs)
+        for f in _files_from_working_dirs(working_dirs, recursive=recursive)
         if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
     ]
     if not files:
@@ -389,6 +399,7 @@ def MergeByDate(
     sort_date: Optional[str],
     target_dir: Path,
     working_dirs: list[Path],
+    recursive: bool,
     history: bool,
     history_path: Optional[Path],
     dry_run: bool,
@@ -410,7 +421,7 @@ def MergeByDate(
     target_date = date.fromisoformat(sort_date) if sort_date else date.today()
     files = [
         f
-        for f in _files_from_working_dirs(working_dirs)
+        for f in _files_from_working_dirs(working_dirs, recursive=recursive)
         if datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
     ]
 
@@ -452,6 +463,7 @@ def MergeByExtensionAndDate(
     extension: str,
     target_dir: Path,
     working_dirs: list[Path],
+    recursive: bool,
     history: bool = False,
     history_path: Optional[Path] = None,
     dry_run: bool = False,
@@ -472,7 +484,7 @@ def MergeByExtensionAndDate(
 
     files = [
         f
-        for f in _files_from_working_dirs(working_dirs)
+        for f in _files_from_working_dirs(working_dirs, recursive=recursive)
         if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
         and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
     ]
@@ -514,6 +526,7 @@ def MergeByExtensionAndDate(
 def MergeByFileType(
     target_dir: Path,
     working_dirs: list[Path],
+    recursive: bool,
     history: bool = False,
     history_path: Optional[Path] = None,
     dry_run: bool = False,
@@ -522,7 +535,7 @@ def MergeByFileType(
         f"Merging all files by file type from {len(working_dirs)} working directories -> {target_dir}"
     )
 
-    files = _files_from_working_dirs(working_dirs)
+    files = _files_from_working_dirs(working_dirs, recursive=recursive)
     if not files:
         print("No files found in provided working directories.")
         return
@@ -565,6 +578,7 @@ def SeperateByDate(
     sort_date: Optional[str],
     target_dir: Path,
     working_dir: Path,
+    recursive: bool,
     history: bool,
     history_path: Optional[Path],
     dry_run: bool,
@@ -573,6 +587,7 @@ def SeperateByDate(
         sort_date=sort_date,
         target_dir=target_dir,
         working_dir=working_dir,
+        recursive=recursive,
         history=history,
         history_path=history_path,
         dry_run=dry_run,
@@ -584,6 +599,7 @@ def SeperateByExtensionAndDate(
     extension: str,
     target_dir: Path,
     working_dir: Path,
+    recursive: bool,
     history: bool = False,
     history_path: Optional[Path] = None,
     dry_run: bool = False,
@@ -593,6 +609,7 @@ def SeperateByExtensionAndDate(
         extension=extension,
         target_dir=target_dir,
         working_dir=working_dir,
+        recursive=recursive,
         history=history,
         history_path=history_path,
         dry_run=dry_run,

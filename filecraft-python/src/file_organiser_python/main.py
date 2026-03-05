@@ -100,6 +100,11 @@ def rename(
     working_dir: Optional[Path] = typer.Option(
         None, help="Source directory to process."
     ),
+    recursive: bool = typer.Option(
+        False,
+        "--recursive",
+        help="Recursively include files from all subdirectories.",
+    ),
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
     renameWith: Optional[str] = typer.Option(
@@ -115,6 +120,7 @@ def rename(
         organizer = FileOrganizer(
             target_dir=target_dir,
             working_dir=working_dir,
+            recursive=recursive,
             dry_run=dry_run,
             save_history=history,
             renameWith=renameWith,
@@ -152,6 +158,11 @@ def separate(
     working_dir: Optional[Path] = typer.Option(
         None, help="Source directory to process."
     ),
+    recursive: bool = typer.Option(
+        False,
+        "--recursive",
+        help="Recursively include files from all subdirectories.",
+    ),
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
 ) -> None:
@@ -165,6 +176,7 @@ def separate(
         organizer = FileOrganizer(
             target_dir=target_dir,
             working_dir=working_dir,
+            recursive=recursive,
             dry_run=dry_run,
             save_history=history,
             sort_date=sort_date,
@@ -231,6 +243,11 @@ def merge(
     working_dirs: list[Path] = typer.Option(
         ..., "--working-dir", help="One or more source directories to merge from."
     ),
+    recursive: bool = typer.Option(
+        False,
+        "--recursive",
+        help="Recursively include files from all subdirectories of every --working-dir.",
+    ),
     dry_run: bool = typer.Option(False, help="Preview actions without making changes."),
     history: bool = typer.Option(False, "--history", help="Save operation history."),
 ) -> None:
@@ -244,6 +261,7 @@ def merge(
         organizer = FileOrganizer(
             target_dir=target_dir,
             working_dirs=working_dirs,
+            recursive=recursive,
             dry_run=dry_run,
             save_history=history,
             sort_date=sort_date,
