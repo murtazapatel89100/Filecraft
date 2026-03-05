@@ -444,6 +444,116 @@ func TestSeparateRecursiveDryRunDoesNotMoveFiles(t *testing.T) {
 	}
 }
 
+func TestRenameRecursiveExcludesTargetSubtreeWithinWorkingDir(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	targetInsideWork := filepath.Join(work, "out")
+
+	mustWriteFile(t, filepath.Join(work, "nested", "source.txt"), "source")
+	mustWriteFile(t, filepath.Join(targetInsideWork, "existing.txt"), "existing")
+	mustWriteFile(t, filepath.Join(targetInsideWork, "archived", "older.txt"), "older")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  targetInsideWork,
+		WorkingDir: work,
+		Recursive:  true,
+		RenameWith: "doc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Rename(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(targetInsideWork, "doc_1.txt")); err != nil {
+		t.Fatalf("expected source file renamed into target: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(targetInsideWork, "existing.txt")); err != nil {
+		t.Fatalf("expected existing target file to remain untouched: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(targetInsideWork, "archived", "older.txt")); err != nil {
+		t.Fatalf("expected nested target file to remain untouched: %v", err)
+	}
+}
+
+func TestRenameRecursiveSortsByBasenameThenPath(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	mustWriteFile(t, filepath.Join(work, "a", "same.txt"), "from-a")
+	mustWriteFile(t, filepath.Join(work, "b", "same.txt"), "from-b")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  out,
+		WorkingDir: work,
+		Recursive:  true,
+		RenameWith: "order",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Rename(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	firstContent, err := os.ReadFile(filepath.Join(out, "order_1.txt"))
+	if err != nil {
+		t.Fatalf("expected first renamed output file: %v", err)
+	}
+	secondContent, err := os.ReadFile(filepath.Join(out, "order_2.txt"))
+	if err != nil {
+		t.Fatalf("expected second renamed output file: %v", err)
+	}
+
+	if string(firstContent) != "from-a" {
+		t.Fatalf("expected order_1.txt from directory a, got %q", string(firstContent))
+	}
+	if string(secondContent) != "from-b" {
+		t.Fatalf("expected order_2.txt from directory b, got %q", string(secondContent))
+	}
+}
+
+func TestMergeRecursiveOverlappingWorkingDirsAvoidsDuplicateProcessing(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	nested := filepath.Join(work, "nested")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(nested, "doc.pdf"), "pdf")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:   out,
+		WorkingDirs: []string{work, nested},
+		Mode:        ModeExtension,
+		SortExt:     ".pdf",
+		Recursive:   true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Merge(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "PDF", "doc.pdf")); err != nil {
+		t.Fatalf("expected merged file once: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "PDF", "doc_1.pdf")); !os.IsNotExist(err) {
+		t.Fatalf("expected no duplicate merge output: %v", err)
+	}
+}
+
 func TestSeparateFileTypeWithCategoryFilter(t *testing.T) {
 	base := t.TempDir()
 	work := filepath.Join(base, "work")

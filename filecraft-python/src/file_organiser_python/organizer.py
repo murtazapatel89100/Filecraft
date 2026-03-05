@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -32,6 +33,14 @@ class TargetPathNotDirectoryError(NotADirectoryError):
 
 
 class FileOrganizer:
+    @staticmethod
+    def _is_relative_to(path: Path, parent: Path) -> bool:
+        try:
+            path.relative_to(parent)
+            return True
+        except ValueError:
+            return False
+
     def __init__(
         self,
         target_dir: Optional[Path] = None,
@@ -78,10 +87,33 @@ class FileOrganizer:
             self.history_path = build_non_conflicting_path(candidate_history_path)
 
     def rename(self) -> None:
+        excluded_dirs = (
+            [self.target_dir]
+            if self.recursive
+            and self._is_relative_to(self.target_dir, self.working_dir)
+            else []
+        )
+
+        def _is_excluded(path: Path) -> bool:
+            return any(
+                self._is_relative_to(path, excluded) for excluded in excluded_dirs
+            )
+
         if self.recursive:
-            files = [f for f in self.working_dir.rglob("*") if f.is_file()]
+            files: list[Path] = []
+            for root, dirs, filenames in os.walk(self.working_dir, topdown=True):
+                root_path = Path(root)
+                dirs[:] = [
+                    dir_name
+                    for dir_name in dirs
+                    if not _is_excluded(root_path / dir_name)
+                ]
+                files.extend(root_path / file_name for file_name in filenames)
         else:
             files = [f for f in self.working_dir.iterdir() if f.is_file()]
+
+        if excluded_dirs:
+            files = [file for file in files if not _is_excluded(file)]
 
         if not files:
             print("No files found in the working directory.")
@@ -89,7 +121,12 @@ class FileOrganizer:
 
         rename_map: dict[str, str] = {}
 
-        for index, file in enumerate(sorted(files), start=1):
+        for index, file in enumerate(
+            sorted(
+                files, key=lambda current_file: (current_file.name, str(current_file))
+            ),
+            start=1,
+        ):
             if self.renameWith:
                 new_name = f"{self.renameWith}_{index}{file.suffix}"
             else:

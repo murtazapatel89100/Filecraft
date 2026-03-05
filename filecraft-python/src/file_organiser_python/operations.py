@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -72,14 +73,60 @@ def _normalize_file_type(file_type: Optional[str]) -> Optional[tuple[str, str]]:
 
 
 def _files_from_working_dirs(
-    working_dirs: list[Path], recursive: bool = False
+    working_dirs: list[Path],
+    recursive: bool = False,
+    excluded_dirs: Optional[list[Path]] = None,
 ) -> list[Path]:
+    def _is_relative_to(path: Path, parent: Path) -> bool:
+        try:
+            path.relative_to(parent)
+            return True
+        except ValueError:
+            return False
+
+    def _is_excluded_path(path: Path, exclusions: list[Path]) -> bool:
+        return any(_is_relative_to(path, excluded) for excluded in exclusions)
+
+    def _normalized_roots(paths: list[Path]) -> list[Path]:
+        resolved = sorted(
+            {path.resolve() for path in paths},
+            key=lambda path: (len(path.parts), str(path)),
+        )
+        roots: list[Path] = []
+        for candidate in resolved:
+            if any(_is_relative_to(candidate, root) for root in roots):
+                continue
+            roots.append(candidate)
+        return roots
+
+    normalized_exclusions = [path.resolve() for path in excluded_dirs or []]
+
     files: list[Path] = []
-    for working_dir in working_dirs:
+    for working_dir in _normalized_roots(working_dirs):
+        if _is_excluded_path(working_dir, normalized_exclusions):
+            continue
+
         if recursive:
-            files.extend([f for f in working_dir.rglob("*") if f.is_file()])
+            for root, dirs, filenames in os.walk(working_dir, topdown=True):
+                root_path = Path(root)
+
+                dirs[:] = [
+                    dir_name
+                    for dir_name in dirs
+                    if not _is_excluded_path(
+                        root_path / dir_name, normalized_exclusions
+                    )
+                ]
+
+                files.extend(root_path / file_name for file_name in filenames)
         else:
-            files.extend([f for f in working_dir.iterdir() if f.is_file()])
+            files.extend(
+                [
+                    f
+                    for f in working_dir.iterdir()
+                    if f.is_file() and not _is_excluded_path(f, normalized_exclusions)
+                ]
+            )
     return files
 
 
@@ -106,7 +153,9 @@ def SeparateByExtension(
 
     files = [
         f
-        for f in _files_from_working_dirs([working_dir], recursive=recursive)
+        for f in _files_from_working_dirs(
+            [working_dir], recursive=recursive, excluded_dirs=[target_dir]
+        )
         if f.is_file() and get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
     ]
     if not files:
@@ -163,7 +212,9 @@ def SeparateByDate(
     target_date = date.fromisoformat(sort_date) if sort_date else date.today()
     files = [
         f
-        for f in _files_from_working_dirs([working_dir], recursive=recursive)
+        for f in _files_from_working_dirs(
+            [working_dir], recursive=recursive, excluded_dirs=[target_dir]
+        )
         if f.is_file()
         and datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
     ]
@@ -222,7 +273,9 @@ def SeparateByExtensionAndDate(
 
     files = [
         f
-        for f in _files_from_working_dirs([working_dir], recursive=recursive)
+        for f in _files_from_working_dirs(
+            [working_dir], recursive=recursive, excluded_dirs=[target_dir]
+        )
         if f.is_file()
         and get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
         and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
@@ -283,7 +336,9 @@ def SeparateByFileType(
     else:
         print(f"Separating all files by file type in {working_dir} -> {target_dir}")
 
-    files = _files_from_working_dirs([working_dir], recursive=recursive)
+    files = _files_from_working_dirs(
+        [working_dir], recursive=recursive, excluded_dirs=[target_dir]
+    )
     if not files:
         print(f"No files found in {working_dir}.")
         return
@@ -358,7 +413,9 @@ def MergeByExtension(
 
     files = [
         f
-        for f in _files_from_working_dirs(working_dirs, recursive=recursive)
+        for f in _files_from_working_dirs(
+            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
+        )
         if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
     ]
     if not files:
@@ -421,7 +478,9 @@ def MergeByDate(
     target_date = date.fromisoformat(sort_date) if sort_date else date.today()
     files = [
         f
-        for f in _files_from_working_dirs(working_dirs, recursive=recursive)
+        for f in _files_from_working_dirs(
+            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
+        )
         if datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
     ]
 
@@ -484,7 +543,9 @@ def MergeByExtensionAndDate(
 
     files = [
         f
-        for f in _files_from_working_dirs(working_dirs, recursive=recursive)
+        for f in _files_from_working_dirs(
+            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
+        )
         if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
         and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
     ]
@@ -535,7 +596,9 @@ def MergeByFileType(
         f"Merging all files by file type from {len(working_dirs)} working directories -> {target_dir}"
     )
 
-    files = _files_from_working_dirs(working_dirs, recursive=recursive)
+    files = _files_from_working_dirs(
+        working_dirs, recursive=recursive, excluded_dirs=[target_dir]
+    )
     if not files:
         print("No files found in provided working directories.")
         return

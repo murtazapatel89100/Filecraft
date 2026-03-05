@@ -121,7 +121,7 @@ func (f *FileOrganizer) separateByExtension(out io.Writer) error {
 		return err
 	}
 
-	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive)
+	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (f *FileOrganizer) separateByDate(out io.Writer) error {
 		return err
 	}
 
-	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive)
+	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (f *FileOrganizer) separateByExtensionAndDate(out io.Writer) error {
 		return err
 	}
 
-	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive)
+	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (f *FileOrganizer) separateByFileType(out io.Writer) error {
 		fmt.Fprintf(out, "Separating files with filter %s in %s → %s\n", f.fileType, f.workingDir, f.targetDir)
 	}
 
-	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive)
+	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func (f *FileOrganizer) mergeByExtension(out io.Writer) error {
 		return err
 	}
 
-	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive)
+	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -375,7 +375,7 @@ func (f *FileOrganizer) mergeByDate(out io.Writer) error {
 		return err
 	}
 
-	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive)
+	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -423,7 +423,7 @@ func (f *FileOrganizer) mergeByExtensionAndDate(out io.Writer) error {
 		return err
 	}
 
-	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive)
+	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -454,7 +454,7 @@ func (f *FileOrganizer) mergeByExtensionAndDate(out io.Writer) error {
 func (f *FileOrganizer) mergeByFileType(out io.Writer) error {
 	fmt.Fprintf(out, "Merging all files by file type from %d working directories → %s\n", len(f.workingDirs), f.targetDir)
 
-	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive)
+	files, err := filesFromWorkingDirs(f.workingDirs, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}

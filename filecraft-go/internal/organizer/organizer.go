@@ -109,7 +109,7 @@ func NewFileOrganizer(cfg Config) (*FileOrganizer, error) {
 }
 
 func (f *FileOrganizer) Rename(out io.Writer) error {
-	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive)
+	files, err := filesFromWorkingDirs([]string{f.workingDir}, f.recursive, []string{f.targetDir})
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,12 @@ func (f *FileOrganizer) Rename(out io.Writer) error {
 	}
 
 	sort.Slice(files, func(i, j int) bool {
-		return filepath.Base(files[i]) < filepath.Base(files[j])
+		leftBase := filepath.Base(files[i])
+		rightBase := filepath.Base(files[j])
+		if leftBase == rightBase {
+			return files[i] < files[j]
+		}
+		return leftBase < rightBase
 	})
 
 	renameMap := map[string]string{}

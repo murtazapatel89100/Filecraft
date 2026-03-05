@@ -60,14 +60,96 @@ func getExtension(path string, known []string) string {
 	return strings.ToLower(filepath.Ext(name))
 }
 
-func filesFromWorkingDirs(dirs []string, recursive bool) ([]string, error) {
+func isWithinPath(path string, root string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
+}
+
+func pruneNestedRoots(dirs []string) ([]string, error) {
+	resolvedSet := map[string]struct{}{}
+	for _, dir := range dirs {
+		resolved, err := filepath.Abs(dir)
+		if err != nil {
+			return nil, err
+		}
+		resolvedSet[resolved] = struct{}{}
+	}
+
+	resolvedDirs := make([]string, 0, len(resolvedSet))
+	for dir := range resolvedSet {
+		resolvedDirs = append(resolvedDirs, dir)
+	}
+
+	sort.Slice(resolvedDirs, func(i, j int) bool {
+		leftDepth := strings.Count(resolvedDirs[i], string(filepath.Separator))
+		rightDepth := strings.Count(resolvedDirs[j], string(filepath.Separator))
+		if leftDepth == rightDepth {
+			return resolvedDirs[i] < resolvedDirs[j]
+		}
+		return leftDepth < rightDepth
+	})
+
+	roots := make([]string, 0, len(resolvedDirs))
+	for _, candidate := range resolvedDirs {
+		nested := false
+		for _, root := range roots {
+			if isWithinPath(candidate, root) {
+				nested = true
+				break
+			}
+		}
+
+		if !nested {
+			roots = append(roots, candidate)
+		}
+	}
+
+	return roots, nil
+}
+
+func shouldExcludePath(path string, excluded []string) bool {
+	for _, excludedDir := range excluded {
+		if isWithinPath(path, excludedDir) {
+			return true
+		}
+	}
+	return false
+}
+
+func filesFromWorkingDirs(dirs []string, recursive bool, excludedDirs []string) ([]string, error) {
 	files := make([]string, 0)
 
-	for _, dir := range dirs {
+	roots, err := pruneNestedRoots(dirs)
+	if err != nil {
+		return nil, err
+	}
+
+	resolvedExcluded := make([]string, 0, len(excludedDirs))
+	for _, excludedDir := range excludedDirs {
+		resolved, absErr := filepath.Abs(excludedDir)
+		if absErr != nil {
+			return nil, absErr
+		}
+		resolvedExcluded = append(resolvedExcluded, resolved)
+	}
+
+	for _, dir := range roots {
+		if shouldExcludePath(dir, resolvedExcluded) {
+			continue
+		}
+
 		if recursive {
 			err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
 				if walkErr != nil {
 					return walkErr
+				}
+
+				if entry.IsDir() && shouldExcludePath(path, resolvedExcluded) {
+					return filepath.SkipDir
 				}
 
 				if entry.Type().IsRegular() {
@@ -82,14 +164,15 @@ func filesFromWorkingDirs(dirs []string, recursive bool) ([]string, error) {
 			continue
 		}
 
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return nil, err
+		entries, readErr := os.ReadDir(dir)
+		if readErr != nil {
+			return nil, readErr
 		}
 
 		for _, entry := range entries {
-			if entry.Type().IsRegular() {
-				files = append(files, filepath.Join(dir, entry.Name()))
+			entryPath := filepath.Join(dir, entry.Name())
+			if entry.Type().IsRegular() && !shouldExcludePath(entryPath, resolvedExcluded) {
+				files = append(files, entryPath)
 			}
 		}
 	}
