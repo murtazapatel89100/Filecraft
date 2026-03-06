@@ -1,10 +1,11 @@
 SHELL := /bin/bash
 
-.PHONY: help ci python-install python-lint python-test python-build go-lint go-test go-build
+.PHONY: help ci python-install python-lint python-test python-build go-lint go-test go-build hooks
 
 help:
 	@echo "Available targets:"
 	@echo "  make ci            - Run Python + Go lint/test/build checks"
+	@echo "  make hooks         - Install git pre-commit and pre-push hooks"
 	@echo "  make python-install"
 	@echo "  make python-lint"
 	@echo "  make python-test"
@@ -12,6 +13,10 @@ help:
 	@echo "  make go-lint"
 	@echo "  make go-test"
 	@echo "  make go-build"
+
+hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks installed (using .githooks/ directory)."
 
 release:
 	@command -v git-cliff >/dev/null 2>&1 || { \
@@ -44,7 +49,7 @@ python-build:
 	cd filecraft-python && poetry run pyinstaller --onefile --name Filecraft --paths src src/file_organiser_python/main.py
 
 go-lint:
-	cd filecraft-go && gofmt -w .
+	@cd filecraft-go && UNFORMATTED=$$(gofmt -l .); if [ -n "$$UNFORMATTED" ]; then echo "Unformatted Go files:"; echo "$$UNFORMATTED"; exit 1; fi
 	cd filecraft-go && go vet ./...
 
 go-test:

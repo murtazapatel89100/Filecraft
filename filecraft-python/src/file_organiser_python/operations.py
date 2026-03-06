@@ -1,113 +1,154 @@
-import os
+"""
+Core file organization operations.
+
+All separate/merge operations funnel through ``_organize_files`` which owns
+the discover -> filter -> move -> history loop.  Public functions are thin
+wrappers that supply a file filter and a per-file destination builder.
+"""
+
 import errno
+import os
 import shutil
+from datetime import date, datetime
 from pathlib import Path
 from typing import Callable, Optional
 
-from file_organiser_python.utils import (
-    ensure_directory,
-    build_non_conflicting_path,
-    get_extension,
+from file_organiser_python.constants import (
+    ARCHIVE_EXTENSIONS,
+    AUDIO_EXTENSIONS,
+    CODE_EXTENSIONS,
+    DISK_IMAGE_EXTENSIONS,
+    DOCUMENT_EXTENSIONS,
+    EXECUTABLE_EXTENSIONS,
+    FONT_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    PRESENTATION_EXTENSIONS,
+    SPREADSHEET_EXTENSIONS,
+    VIDEO_EXTENSIONS,
 )
 from file_organiser_python.history import save_history
-from file_organiser_python.constants import (
-    IMAGE_EXTENSIONS,
-    DOCUMENT_EXTENSIONS,
-    SPREADSHEET_EXTENSIONS,
-    PRESENTATION_EXTENSIONS,
-    VIDEO_EXTENSIONS,
-    AUDIO_EXTENSIONS,
-    ARCHIVE_EXTENSIONS,
-    EXECUTABLE_EXTENSIONS,
-    CODE_EXTENSIONS,
-    FONT_EXTENSIONS,
-    DISK_IMAGE_EXTENSIONS,
+from file_organiser_python.utils import (
+    build_non_conflicting_path,
+    ensure_directory,
+    get_extension,
 )
 
-from datetime import date, datetime
+# ---------------------------------------------------------------------------
+# Extension -> category mapping
+# ---------------------------------------------------------------------------
+
+_CATEGORY_SOURCES: list[tuple[set[str], str]] = [
+    (IMAGE_EXTENSIONS, "IMAGES"),
+    (VIDEO_EXTENSIONS, "VIDEOS"),
+    (AUDIO_EXTENSIONS, "AUDIO"),
+    (DOCUMENT_EXTENSIONS, "DOCUMENTS"),
+    (SPREADSHEET_EXTENSIONS, "SPREADSHEETS"),
+    (PRESENTATION_EXTENSIONS, "PRESENTATIONS"),
+    (ARCHIVE_EXTENSIONS, "ARCHIVES"),
+    (EXECUTABLE_EXTENSIONS, "EXECUTABLES"),
+    (CODE_EXTENSIONS, "CODE"),
+    (FONT_EXTENSIONS, "FONTS"),
+    (DISK_IMAGE_EXTENSIONS, "DISK_IMAGES"),
+]
 
 EXTENSION_TYPE_MAP: dict[str, str] = {}
+for _exts, _cat in _CATEGORY_SOURCES:
+    for _ext in _exts:
+        EXTENSION_TYPE_MAP[_ext] = _cat
 
-for ext in IMAGE_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "IMAGES"
-for ext in VIDEO_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "VIDEOS"
-for ext in AUDIO_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "AUDIO"
-for ext in DOCUMENT_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "DOCUMENTS"
-for ext in SPREADSHEET_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "SPREADSHEETS"
-for ext in PRESENTATION_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "PRESENTATIONS"
-for ext in ARCHIVE_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "ARCHIVES"
-for ext in EXECUTABLE_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "EXECUTABLES"
-for ext in CODE_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "CODE"
-for ext in FONT_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "FONTS"
-for ext in DISK_IMAGE_EXTENSIONS:
-    EXTENSION_TYPE_MAP[ext] = "DISK_IMAGES"
+KNOWN_EXTENSIONS: set[str] = set(EXTENSION_TYPE_MAP.keys())
+KNOWN_FILE_TYPES: set[str] = set(EXTENSION_TYPE_MAP.values()) | {"OTHERS"}
 
-KNOWN_EXTENSIONS = set(EXTENSION_TYPE_MAP.keys())
-KNOWN_FILE_TYPES = set(EXTENSION_TYPE_MAP.values()) | {"OTHERS"}
+# ---------------------------------------------------------------------------
+# File-type normalisation
+# ---------------------------------------------------------------------------
+
+
+def normalize_file_type(file_type: Optional[str]) -> Optional[tuple[str, str]]:
+    """Return ``(kind, value)`` for a user-supplied type filter.
+
+    *kind* is ``"extension"``, ``"category"`` or ``"invalid"``.
+    Returns ``None`` when *file_type* is empty / ``None``.
+    """
+    if not file_type:
+        return None
+
+    stripped = file_type.strip().lower()
+    if not stripped:
+        return None
+
+    ext_candidate = f".{stripped.lstrip('.')}"
+    if ext_candidate in KNOWN_EXTENSIONS:
+        return ("extension", ext_candidate)
+
+    cat_candidate = stripped.upper().replace("-", "_").replace(" ", "_")
+    if cat_candidate in KNOWN_FILE_TYPES:
+        return ("category", cat_candidate)
+
+    return ("invalid", "")
+
+
+# ---------------------------------------------------------------------------
+# Low-level move helpers
+# ---------------------------------------------------------------------------
 
 
 def _paths_refer_to_same_file(source: Path, destination: Path) -> bool:
-    source_abs = source.absolute()
-    destination_abs = destination.absolute()
+    src_abs = source.absolute()
+    dst_abs = destination.absolute()
 
-    if source_abs == destination_abs:
+    if src_abs == dst_abs:
         return True
 
     if not destination.exists():
         return False
 
     try:
-        return os.path.samefile(source_abs, destination_abs)
+        return os.path.samefile(src_abs, dst_abs)
     except OSError:
         return False
 
 
 def _preflight_cross_device_space(
-    files: list[Path], destination_for_file: Callable[[Path], Path]
+    files: list[Path],
+    destination_for_file: Callable[[Path], Path],
 ) -> None:
-    required_bytes_by_device: dict[int, int] = {}
-    sample_path_by_device: dict[int, Path] = {}
+    """Raise ``OSError(ENOSPC)`` when a cross-device move would run out of space."""
+    needed: dict[int, int] = {}
+    sample: dict[int, Path] = {}
 
-    for file_path in files:
-        destination_path = destination_for_file(file_path)
-
-        if _paths_refer_to_same_file(file_path, destination_path):
+    for fp in files:
+        dst = destination_for_file(fp)
+        if _paths_refer_to_same_file(fp, dst):
             continue
 
-        destination_parent = destination_path.parent
-        destination_device = destination_parent.stat().st_dev
-
-        if file_path.stat().st_dev == destination_device:
+        dst_parent = dst.parent
+        if not dst_parent.exists():
             continue
 
-        required_bytes_by_device[destination_device] = (
-            required_bytes_by_device.get(destination_device, 0) + file_path.stat().st_size
-        )
-        sample_path_by_device[destination_device] = destination_parent
+        dst_dev = dst_parent.stat().st_dev
+        if fp.stat().st_dev == dst_dev:
+            continue
 
-    for device, required_bytes in required_bytes_by_device.items():
-        sample_path = sample_path_by_device[device]
-        free_bytes = shutil.disk_usage(sample_path).free
-        if required_bytes > free_bytes:
+        needed[dst_dev] = needed.get(dst_dev, 0) + fp.stat().st_size
+        sample[dst_dev] = dst_parent
+
+    for dev, req in needed.items():
+        free = shutil.disk_usage(sample[dev]).free
+        if req > free:
             raise OSError(
                 errno.ENOSPC,
-                (
-                    "Insufficient free space on destination filesystem. "
-                    f"Required {required_bytes} bytes, available {free_bytes} bytes in {sample_path}."
-                ),
+                f"Insufficient free space on destination filesystem. "
+                f"Required {req} bytes, available {free} bytes in {sample[dev]}.",
             )
 
 
-def _move_file(file_path: Path, destination_path: Path, dry_run: bool) -> Optional[Path]:
+def _move_file(
+    file_path: Path,
+    destination_path: Path,
+    dry_run: bool,
+) -> Optional[Path]:
+    """Move *file_path* to *destination_path*, handling conflicts and cross-device moves."""
     if _paths_refer_to_same_file(file_path, destination_path):
         print(f"Skipping {file_path} (already at destination).")
         return None
@@ -124,26 +165,21 @@ def _move_file(file_path: Path, destination_path: Path, dry_run: bool) -> Option
         file_path.rename(new_path)
     except OSError as exc:
         if exc.errno == errno.EXDEV:
-            source_size = file_path.stat().st_size
-            free_bytes = shutil.disk_usage(new_path.parent).free
-            if source_size > free_bytes:
+            src_size = file_path.stat().st_size
+            free = shutil.disk_usage(new_path.parent).free
+            if src_size > free:
                 raise OSError(
                     errno.ENOSPC,
-                    (
-                        "Insufficient free space while moving files across filesystems. "
-                        f"Required {source_size} bytes, available {free_bytes} bytes in {new_path.parent}."
-                    ),
+                    f"Insufficient free space while moving across filesystems. "
+                    f"Required {src_size} bytes, available {free} bytes in {new_path.parent}.",
                 ) from exc
-
             shutil.copy2(file_path, new_path)
             file_path.unlink()
         elif exc.errno == errno.ENOSPC:
             raise OSError(
                 errno.ENOSPC,
-                (
-                    f"Insufficient free space while moving {file_path} to {new_path}. "
-                    "Free space on the destination and retry."
-                ),
+                f"Insufficient free space while moving {file_path} to {new_path}. "
+                "Free space on the destination and retry.",
             ) from exc
         else:
             raise
@@ -151,23 +187,9 @@ def _move_file(file_path: Path, destination_path: Path, dry_run: bool) -> Option
     return new_path
 
 
-def _normalize_file_type(file_type: Optional[str]) -> Optional[tuple[str, str]]:
-    if not file_type:
-        return None
-
-    normalized_value = file_type.strip().lower()
-    if not normalized_value:
-        return None
-
-    normalized_extension = f".{normalized_value.lstrip('.')}"
-    if normalized_extension in KNOWN_EXTENSIONS:
-        return ("extension", normalized_extension)
-
-    normalized_type = normalized_value.upper().replace("-", "_").replace(" ", "_")
-    if normalized_type in KNOWN_FILE_TYPES:
-        return ("category", normalized_type)
-
-    return ("invalid", "")
+# ---------------------------------------------------------------------------
+# File discovery
+# ---------------------------------------------------------------------------
 
 
 def _files_from_working_dirs(
@@ -175,71 +197,146 @@ def _files_from_working_dirs(
     recursive: bool = False,
     excluded_dirs: Optional[list[Path]] = None,
 ) -> list[Path]:
-    def _is_relative_to(path: Path, parent: Path) -> bool:
-        try:
-            path.relative_to(parent)
-            return True
-        except ValueError:
-            return False
+    """Collect regular files from *working_dirs*, pruning *excluded_dirs*."""
 
-    def _is_excluded_path(path: Path, exclusions: list[Path]) -> bool:
-        return any(_is_relative_to(path, excluded) for excluded in exclusions)
+    def _abs(p: Path) -> Path:
+        return p.absolute()
 
-    def _normalize_path(path: Path) -> Path:
-        if path.is_absolute():
-            return path
-        return path.absolute()
+    def _is_excluded(p: Path, exclusions: list[Path]) -> bool:
+        return any(p.is_relative_to(ex) for ex in exclusions)
 
-    def _normalized_roots(paths: list[Path]) -> list[Path]:
-        resolved = sorted(
-            {_normalize_path(path) for path in paths},
-            key=lambda path: (len(path.parts), str(path)),
-        )
-        roots: list[Path] = []
-        for candidate in resolved:
-            if any(_is_relative_to(candidate, root) for root in roots):
-                continue
-            roots.append(candidate)
-        return roots
+    # De-duplicate and prune nested roots so each file is visited once.
+    resolved = sorted(
+        {_abs(d) for d in working_dirs},
+        key=lambda p: (len(p.parts), str(p)),
+    )
+    roots: list[Path] = []
+    for candidate in resolved:
+        if any(candidate.is_relative_to(r) for r in roots):
+            continue
+        roots.append(candidate)
 
-    normalized_exclusions = [_normalize_path(path) for path in excluded_dirs or []]
+    abs_excluded = [_abs(d) for d in excluded_dirs or []]
 
     files: list[Path] = []
-    for working_dir in _normalized_roots(working_dirs):
-        effective_exclusions = [
-            excluded for excluded in normalized_exclusions if excluded != working_dir
-        ]
+    for root in roots:
+        effective = [ex for ex in abs_excluded if ex != root]
 
-        if _is_excluded_path(working_dir, effective_exclusions):
+        if _is_excluded(root, effective):
             continue
 
         if recursive:
-            for root, dirs, filenames in os.walk(working_dir, topdown=True):
-                root_path = Path(root)
-
-                dirs[:] = [
-                    dir_name
-                    for dir_name in dirs
-                    if not _is_excluded_path(root_path / dir_name, effective_exclusions)
+            for dirpath, dirnames, filenames in os.walk(root, topdown=True):
+                dp = Path(dirpath)
+                dirnames[:] = [
+                    d for d in dirnames if not _is_excluded(dp / d, effective)
                 ]
-
-                files.extend(
-                    candidate
-                    for candidate in (root_path / file_name for file_name in filenames)
-                    if candidate.is_file()
-                )
+                files.extend(c for c in (dp / fn for fn in filenames) if c.is_file())
         else:
             files.extend(
-                [
-                    f
-                    for f in working_dir.iterdir()
-                    if f.is_file() and not _is_excluded_path(f, effective_exclusions)
-                ]
+                f
+                for f in root.iterdir()
+                if f.is_file() and not _is_excluded(f, effective)
             )
+
     return files
 
 
-def SeparateByExtension(
+# ---------------------------------------------------------------------------
+# Core organise loop
+# ---------------------------------------------------------------------------
+
+
+def _organize_files(
+    *,
+    working_dirs: list[Path],
+    target_dir: Path,
+    file_filter: Callable[[Path], bool],
+    dest_for_file: Callable[[Path], Path],
+    operation: str,
+    header_message: str,
+    no_match_message: str,
+    recursive: bool = False,
+    dry_run: bool = False,
+    history: bool = False,
+    history_path: Optional[Path] = None,
+) -> None:
+    """Discover -> filter -> create dirs -> preflight -> move -> save history."""
+    print(header_message)
+
+    files = [
+        f
+        for f in _files_from_working_dirs(
+            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
+        )
+        if f.is_file() and file_filter(f)
+    ]
+
+    if not files:
+        print(no_match_message)
+        return
+
+    # Ensure every unique destination directory exists.
+    seen_dirs: set[Path] = set()
+    for f in files:
+        parent = dest_for_file(f).parent
+        if parent not in seen_dirs:
+            ensure_directory(parent, dry_run=dry_run)
+            seen_dirs.add(parent)
+
+    if not dry_run:
+        _preflight_cross_device_space(files, dest_for_file)
+
+    revert_map: dict[str, str] = {}
+    for f in files:
+        original = f.resolve()
+        moved = _move_file(f, dest_for_file(f), dry_run)
+        if not moved or dry_run:
+            continue
+        revert_map[str(moved.resolve())] = str(original)
+
+    if history and not dry_run and revert_map:
+        if not history_path:
+            print("Failed to validate History path, cannot save history.")
+            return
+        save_history(
+            history_path=history_path, revert_map=revert_map, operation=operation
+        )
+
+
+# ---------------------------------------------------------------------------
+# Convenience helpers for dest / filter builders
+# ---------------------------------------------------------------------------
+
+
+def _ext_folder(ext: str) -> str:
+    """``'.pdf'`` -> ``'PDF'``"""
+    return ext.lstrip(".").upper()
+
+
+def _resolve_date(sort_date: Optional[str]) -> date:
+    return date.fromisoformat(sort_date) if sort_date else date.today()
+
+
+def _date_label(sort_date: Optional[str]) -> str:
+    return sort_date if sort_date else date.today().isoformat()
+
+
+def _matches_date(f: Path, target: date) -> bool:
+    return datetime.fromtimestamp(f.stat().st_mtime).date() == target
+
+
+def _category_for_file(f: Path) -> str:
+    ext = get_extension(f, KNOWN_EXTENSIONS)
+    return EXTENSION_TYPE_MAP.get(ext, "OTHERS")
+
+
+# ---------------------------------------------------------------------------
+# Public operation functions  (separate_*)
+# ---------------------------------------------------------------------------
+
+
+def separate_by_extension(
     extension: str,
     target_dir: Path,
     working_dir: Path,
@@ -248,58 +345,25 @@ def SeparateByExtension(
     history: bool = False,
     dry_run: bool = False,
 ) -> None:
-    print(f"Separating by extension: {extension} in {working_dir} -> {target_dir}")
+    ext = extension.lower()
+    folder = target_dir / _ext_folder(ext)
 
-    normalized_extension = extension.lower()
-    sorted_dir = target_dir / normalized_extension.lstrip(".").upper()
-
-    print(f"Ensuring directory exists: {sorted_dir}...")
-
-    ensure_directory(sorted_dir, dry_run=dry_run)
-
-    revert_map: dict[str, str] = {}
-    operation = "separate_by_extension"
-
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            [working_dir], recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if f.is_file() and get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
-    ]
-    if not files:
-        print(f"No files with extension '{extension}' found in {working_dir}.")
-        return
-
-    if not dry_run:
-        _preflight_cross_device_space(
-            files,
-            lambda current_file: sorted_dir / current_file.name,
-        )
-
-    for f in files:
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path, revert_map=revert_map, operation=operation
-        )
+    _organize_files(
+        working_dirs=[working_dir],
+        target_dir=target_dir,
+        file_filter=lambda f: get_extension(f, KNOWN_EXTENSIONS) == ext,
+        dest_for_file=lambda f: folder / f.name,
+        operation="separate_by_extension",
+        header_message=f"Separating by extension: {ext} in {working_dir} -> {target_dir}",
+        no_match_message=f"No files with extension '{extension}' found in {working_dir}.",
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
+    )
 
 
-def SeparateByDate(
+def separate_by_date(
     sort_date: Optional[str],
     target_dir: Path,
     working_dir: Path,
@@ -308,67 +372,26 @@ def SeparateByDate(
     history_path: Optional[Path],
     dry_run: bool,
 ) -> None:
-    if sort_date:
-        print(
-            f"Seperating files modified on {sort_date} in {working_dir} -> {target_dir}"
-        )
-    else:
-        print(f"Seperating files modified today in {working_dir} -> {target_dir}")
+    td = _resolve_date(sort_date)
+    label = _date_label(sort_date)
+    folder = target_dir / label
 
-    sorted_dir = target_dir / (sort_date if sort_date else date.today().isoformat())
-
-    print(f"Ensuring directory exists: {sorted_dir}...")
-
-    ensure_directory(sorted_dir, dry_run=dry_run)
-
-    revert_map: dict[str, str] = {}
-    operation = "separate_by_date"
-
-    target_date = date.fromisoformat(sort_date) if sort_date else date.today()
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            [working_dir], recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if f.is_file()
-        and datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
-    ]
-
-    if not files:
-        print(
-            f"No files modified on {sort_date if sort_date else 'today'} found in {working_dir}."
-        )
-        return
-
-    if not dry_run:
-        _preflight_cross_device_space(
-            files,
-            lambda current_file: sorted_dir / current_file.name,
-        )
-
-    for f in files:
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path, revert_map=revert_map, operation=operation
-        )
+    _organize_files(
+        working_dirs=[working_dir],
+        target_dir=target_dir,
+        file_filter=lambda f: _matches_date(f, td),
+        dest_for_file=lambda f: folder / f.name,
+        operation="separate_by_date",
+        header_message=f"Separating files modified on {label} in {working_dir} -> {target_dir}",
+        no_match_message=f"No files modified on {label} found in {working_dir}.",
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
+    )
 
 
-def SeparateByExtensionAndDate(
+def separate_by_extension_and_date(
     sort_date: Optional[str],
     extension: str,
     target_dir: Path,
@@ -378,70 +401,35 @@ def SeparateByExtensionAndDate(
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
-    normalized_extension = extension.lower()
-    selected_date = date.fromisoformat(sort_date) if sort_date else date.today()
-    date_folder_name = selected_date.isoformat()
+    ext = extension.lower()
+    td = _resolve_date(sort_date)
+    dl = _date_label(sort_date)
+    folder = target_dir / dl / _ext_folder(ext)
 
-    print(
-        f"Separating by extension and date: {extension}, {date_folder_name} in {working_dir} -> {target_dir}"
+    _organize_files(
+        working_dirs=[working_dir],
+        target_dir=target_dir,
+        file_filter=lambda f: (
+            get_extension(f, KNOWN_EXTENSIONS) == ext and _matches_date(f, td)
+        ),
+        dest_for_file=lambda f: folder / f.name,
+        operation="separate_by_extension_and_date",
+        header_message=(
+            f"Separating by extension and date: {ext}, {dl} "
+            f"in {working_dir} -> {target_dir}"
+        ),
+        no_match_message=(
+            f"No files with extension '{extension}' modified on {dl} "
+            f"found in {working_dir}."
+        ),
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
     )
 
-    sorted_dir = (
-        target_dir / date_folder_name / normalized_extension.lstrip(".").upper()
-    )
-    print(f"Ensuring directory exists: {sorted_dir}...")
-    ensure_directory(sorted_dir, dry_run=dry_run)
 
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            [working_dir], recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if f.is_file()
-        and get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
-        and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
-    ]
-
-    if not files:
-        print(
-            f"No files with extension '{extension}' modified on {date_folder_name} found in {working_dir}."
-        )
-        return
-
-    if not dry_run:
-        _preflight_cross_device_space(
-            files,
-            lambda current_file: sorted_dir / current_file.name,
-        )
-
-    revert_map: dict[str, str] = {}
-    operation = "separate_by_extension_and_date"
-
-    for f in files:
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path,
-            revert_map=revert_map,
-            operation=operation,
-        )
-
-
-def SeparateByFileType(
+def separate_by_file_type(
     target_dir: Path,
     working_dir: Path,
     recursive: bool,
@@ -450,74 +438,49 @@ def SeparateByFileType(
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
-    selected_file_type = _normalize_file_type(file_type)
-    if selected_file_type and selected_file_type[0] == "invalid":
+    selected = normalize_file_type(file_type)
+    if selected and selected[0] == "invalid":
         print(f"Unsupported file type filter '{file_type}'.")
         return
 
-    if selected_file_type:
-        print(
-            f"Separating files with filter {file_type} in {working_dir} -> {target_dir}"
-        )
-    else:
-        print(f"Separating all files by file type in {working_dir} -> {target_dir}")
+    def _filter(f: Path) -> bool:
+        if not selected:
+            return True
+        kind, value = selected
+        if kind == "category":
+            return _category_for_file(f) == value
+        return get_extension(f, KNOWN_EXTENSIONS) == value  # extension filter
 
-    files = _files_from_working_dirs(
-        [working_dir], recursive=recursive, excluded_dirs=[target_dir]
+    def _dest(f: Path) -> Path:
+        return target_dir / _category_for_file(f) / f.name
+
+    label = f"with filter {file_type}" if selected else "by file type"
+
+    _organize_files(
+        working_dirs=[working_dir],
+        target_dir=target_dir,
+        file_filter=_filter,
+        dest_for_file=_dest,
+        operation="separate_by_file_type",
+        header_message=f"Separating files {label} in {working_dir} -> {target_dir}",
+        no_match_message=(
+            f"No files found for file type '{file_type}' in {working_dir}."
+            if file_type
+            else f"No files found in {working_dir}."
+        ),
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
     )
-    if not files:
-        print(f"No files found in {working_dir}.")
-        return
-
-    revert_map: dict[str, str] = {}
-    operation = "separate_by_file_type"
-
-    moved_files = 0
-
-    for f in files:
-        extension = get_extension(f, KNOWN_EXTENSIONS)
-        folder_name = EXTENSION_TYPE_MAP.get(extension, "OTHERS")
-
-        if selected_file_type:
-            filter_kind, filter_value = selected_file_type
-            if filter_kind == "category" and folder_name != filter_value:
-                continue
-            if filter_kind == "extension" and extension != filter_value:
-                continue
-
-        sorted_dir = target_dir / folder_name
-
-        ensure_directory(sorted_dir, dry_run=dry_run)
-
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-        moved_files += 1
-
-    if moved_files == 0:
-        print(f"No files found for file type '{file_type}' in {working_dir}.")
-        return
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path,
-            revert_map=revert_map,
-            operation=operation,
-        )
 
 
-def MergeByExtension(
+# ---------------------------------------------------------------------------
+# Public operation functions  (merge_*)
+# ---------------------------------------------------------------------------
+
+
+def merge_by_extension(
     extension: str,
     target_dir: Path,
     working_dirs: list[Path],
@@ -526,63 +489,31 @@ def MergeByExtension(
     history: bool = False,
     dry_run: bool = False,
 ) -> None:
-    print(
-        f"Merging by extension: {extension} from {len(working_dirs)} working directories -> {target_dir}"
+    ext = extension.lower()
+    folder = target_dir / _ext_folder(ext)
+
+    _organize_files(
+        working_dirs=working_dirs,
+        target_dir=target_dir,
+        file_filter=lambda f: get_extension(f, KNOWN_EXTENSIONS) == ext,
+        dest_for_file=lambda f: folder / f.name,
+        operation="merge_by_extension",
+        header_message=(
+            f"Merging by extension: {ext} from {len(working_dirs)} "
+            f"directories -> {target_dir}"
+        ),
+        no_match_message=(
+            f"No files with extension '{extension}' found in "
+            "provided working directories."
+        ),
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
     )
 
-    normalized_extension = extension.lower()
-    sorted_dir = target_dir / normalized_extension.lstrip(".").upper()
 
-    print(f"Ensuring directory exists: {sorted_dir}...")
-    ensure_directory(sorted_dir, dry_run=dry_run)
-
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
-    ]
-    if not files:
-        print(
-            f"No files with extension '{extension}' found in provided working directories."
-        )
-        return
-
-    if not dry_run:
-        _preflight_cross_device_space(
-            files,
-            lambda current_file: sorted_dir / current_file.name,
-        )
-
-    revert_map: dict[str, str] = {}
-    operation = "merge_by_extension"
-
-    for f in files:
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path,
-            revert_map=revert_map,
-            operation=operation,
-        )
-
-
-def MergeByDate(
+def merge_by_date(
     sort_date: Optional[str],
     target_dir: Path,
     working_dirs: list[Path],
@@ -591,69 +522,31 @@ def MergeByDate(
     history_path: Optional[Path],
     dry_run: bool,
 ) -> None:
-    if sort_date:
-        print(
-            f"Merging files modified on {sort_date} from {len(working_dirs)} working directories -> {target_dir}"
-        )
-    else:
-        print(
-            f"Merging files modified today from {len(working_dirs)} working directories -> {target_dir}"
-        )
+    td = _resolve_date(sort_date)
+    label = _date_label(sort_date)
+    folder = target_dir / label
 
-    sorted_dir = target_dir / (sort_date if sort_date else date.today().isoformat())
-
-    print(f"Ensuring directory exists: {sorted_dir}...")
-    ensure_directory(sorted_dir, dry_run=dry_run)
-
-    target_date = date.fromisoformat(sort_date) if sort_date else date.today()
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if datetime.fromtimestamp(f.stat().st_mtime).date() == target_date
-    ]
-
-    if not files:
-        print(
-            f"No files modified on {sort_date if sort_date else 'today'} found in provided working directories."
-        )
-        return
-
-    if not dry_run:
-        _preflight_cross_device_space(
-            files,
-            lambda current_file: sorted_dir / current_file.name,
-        )
-
-    revert_map: dict[str, str] = {}
-    operation = "merge_by_date"
-
-    for f in files:
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path,
-            revert_map=revert_map,
-            operation=operation,
-        )
+    _organize_files(
+        working_dirs=working_dirs,
+        target_dir=target_dir,
+        file_filter=lambda f: _matches_date(f, td),
+        dest_for_file=lambda f: folder / f.name,
+        operation="merge_by_date",
+        header_message=(
+            f"Merging files modified on {label} from {len(working_dirs)} "
+            f"directories -> {target_dir}"
+        ),
+        no_match_message=(
+            f"No files modified on {label} found in " "provided working directories."
+        ),
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
+    )
 
 
-def MergeByExtensionAndDate(
+def merge_by_extension_and_date(
     sort_date: Optional[str],
     extension: str,
     target_dir: Path,
@@ -663,69 +556,35 @@ def MergeByExtensionAndDate(
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
-    normalized_extension = extension.lower()
-    selected_date = date.fromisoformat(sort_date) if sort_date else date.today()
-    date_folder_name = selected_date.isoformat()
+    ext = extension.lower()
+    td = _resolve_date(sort_date)
+    dl = _date_label(sort_date)
+    folder = target_dir / dl / _ext_folder(ext)
 
-    print(
-        f"Merging by extension and date: {extension}, {date_folder_name} from {len(working_dirs)} working directories -> {target_dir}"
+    _organize_files(
+        working_dirs=working_dirs,
+        target_dir=target_dir,
+        file_filter=lambda f: (
+            get_extension(f, KNOWN_EXTENSIONS) == ext and _matches_date(f, td)
+        ),
+        dest_for_file=lambda f: folder / f.name,
+        operation="merge_by_extension_and_date",
+        header_message=(
+            f"Merging by extension and date: {ext}, {dl} from "
+            f"{len(working_dirs)} directories -> {target_dir}"
+        ),
+        no_match_message=(
+            f"No files with extension '{extension}' modified on {dl} "
+            "found in provided working directories."
+        ),
+        recursive=recursive,
+        dry_run=dry_run,
+        history=history,
+        history_path=history_path,
     )
 
-    sorted_dir = (
-        target_dir / date_folder_name / normalized_extension.lstrip(".").upper()
-    )
-    print(f"Ensuring directory exists: {sorted_dir}...")
-    ensure_directory(sorted_dir, dry_run=dry_run)
 
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if get_extension(f, KNOWN_EXTENSIONS) == normalized_extension
-        and datetime.fromtimestamp(f.stat().st_mtime).date() == selected_date
-    ]
-
-    if not files:
-        print(
-            f"No files with extension '{extension}' modified on {date_folder_name} found in provided working directories."
-        )
-        return
-
-    if not dry_run:
-        _preflight_cross_device_space(
-            files,
-            lambda current_file: sorted_dir / current_file.name,
-        )
-
-    revert_map: dict[str, str] = {}
-    operation = "merge_by_extension_and_date"
-
-    for f in files:
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path,
-            revert_map=revert_map,
-            operation=operation,
-        )
-
-
-def MergeByFileType(
+def merge_by_file_type(
     target_dir: Path,
     working_dirs: list[Path],
     recursive: bool,
@@ -733,87 +592,22 @@ def MergeByFileType(
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
-    print(
-        f"Merging all files by file type from {len(working_dirs)} working directories -> {target_dir}"
-    )
+    def _dest(f: Path) -> Path:
+        return target_dir / _category_for_file(f) / f.name
 
-    files = _files_from_working_dirs(
-        working_dirs, recursive=recursive, excluded_dirs=[target_dir]
-    )
-    if not files:
-        print("No files found in provided working directories.")
-        return
-
-    revert_map: dict[str, str] = {}
-    operation = "merge_by_file_type"
-
-    for f in files:
-        extension = get_extension(f, KNOWN_EXTENSIONS)
-        folder_name = EXTENSION_TYPE_MAP.get(extension, "OTHERS")
-        sorted_dir = target_dir / folder_name
-
-        ensure_directory(sorted_dir, dry_run=dry_run)
-
-        original_path = f.resolve()
-        moved_path = _move_file(
-            file_path=f,
-            destination_path=sorted_dir / f.name,
-            dry_run=dry_run,
-        )
-        if not moved_path or dry_run:
-            continue
-
-        revert_map[str(moved_path.resolve())] = str(original_path)
-
-    if history and not dry_run:
-        if not history_path:
-            print("Failed to validate History path, cannot save history.")
-            return
-
-        save_history(
-            history_path=history_path,
-            revert_map=revert_map,
-            operation=operation,
-        )
-
-
-def SeperateByDate(
-    sort_date: Optional[str],
-    target_dir: Path,
-    working_dir: Path,
-    recursive: bool,
-    history: bool,
-    history_path: Optional[Path],
-    dry_run: bool,
-) -> None:
-    SeparateByDate(
-        sort_date=sort_date,
+    _organize_files(
+        working_dirs=working_dirs,
         target_dir=target_dir,
-        working_dir=working_dir,
+        file_filter=lambda _: True,
+        dest_for_file=_dest,
+        operation="merge_by_file_type",
+        header_message=(
+            f"Merging all files by file type from {len(working_dirs)} "
+            f"directories -> {target_dir}"
+        ),
+        no_match_message="No files found in provided working directories.",
         recursive=recursive,
+        dry_run=dry_run,
         history=history,
         history_path=history_path,
-        dry_run=dry_run,
-    )
-
-
-def SeperateByExtensionAndDate(
-    sort_date: Optional[str],
-    extension: str,
-    target_dir: Path,
-    working_dir: Path,
-    recursive: bool,
-    history: bool = False,
-    history_path: Optional[Path] = None,
-    dry_run: bool = False,
-) -> None:
-    SeparateByExtensionAndDate(
-        sort_date=sort_date,
-        extension=extension,
-        target_dir=target_dir,
-        working_dir=working_dir,
-        recursive=recursive,
-        history=history,
-        history_path=history_path,
-        dry_run=dry_run,
     )

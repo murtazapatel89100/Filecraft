@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func buildNonConflictingPath(path string) string {
 	stem := strings.TrimSuffix(base, ext)
 
 	for index := 1; ; index++ {
-		candidate := filepath.Join(dir, stem+"_"+itoa(index)+ext)
+		candidate := filepath.Join(dir, stem+"_"+strconv.Itoa(index)+ext)
 		if _, err := os.Stat(candidate); os.IsNotExist(err) {
 			return candidate
 		}
@@ -57,7 +58,11 @@ func getExtension(path string, known []string) string {
 		}
 	}
 
-	return strings.ToLower(filepath.Ext(name))
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == name {
+		return ""
+	}
+	return ext
 }
 
 func isWithinPath(path string, root string) bool {
@@ -186,31 +191,4 @@ func filesFromWorkingDirs(dirs []string, recursive bool, excludedDirs []string) 
 	}
 
 	return files, nil
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-
-	negative := n < 0
-	if negative {
-		n = -n
-	}
-
-	buf := make([]byte, 0, 11)
-	for n > 0 {
-		buf = append(buf, byte('0'+(n%10)))
-		n /= 10
-	}
-
-	if negative {
-		buf = append(buf, '-')
-	}
-
-	for i, j := 0, len(buf)-1; i < j; i, j = i+1, j-1 {
-		buf[i], buf[j] = buf[j], buf[i]
-	}
-
-	return string(buf)
 }

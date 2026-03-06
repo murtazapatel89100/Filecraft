@@ -79,12 +79,12 @@ func LoadLatestHistory(directory string) (string, error) {
 func readHistory(historyPath string) (map[string]string, error) {
 	content, err := os.ReadFile(historyPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read history file %s: %w", historyPath, err)
 	}
 
 	var payload historyPayload
 	if err := json.Unmarshal(content, &payload); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("corrupted history file (invalid JSON) %s: %w", historyPath, err)
 	}
 
 	if payload.Mappings == nil {

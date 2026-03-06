@@ -22,6 +22,7 @@ Use this guide when making changes so behavior stays aligned across both impleme
   - `release.yml`: tag-driven release automation
 - `VERSION`: canonical repo version (without `v` prefix)
 - `docs/RELEASES.md`: release process and guardrails
+- `.githooks/`: git hook scripts (pre-commit for lint, pre-push for tests)
 
 ## Non-Negotiable Rules
 
@@ -38,6 +39,12 @@ Use this guide when making changes so behavior stays aligned across both impleme
 - `filecraft-python/pyproject.toml` version
 
 ## Local Dev Commands
+
+### Initial Setup
+
+```bash
+make hooks
+```
 
 ### Python
 

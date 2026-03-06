@@ -8,14 +8,14 @@ from file_organiser_python.constants import HISTORY_FILE_PREFIX
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.operations import (
     _files_from_working_dirs,
-    SeparateByExtension,
-    SeparateByDate,
-    SeparateByExtensionAndDate,
-    SeparateByFileType,
-    MergeByExtension,
-    MergeByDate,
-    MergeByExtensionAndDate,
-    MergeByFileType,
+    separate_by_extension,
+    separate_by_date,
+    separate_by_extension_and_date,
+    separate_by_file_type,
+    merge_by_extension,
+    merge_by_date,
+    merge_by_extension_and_date,
+    merge_by_file_type,
 )
 from file_organiser_python.utils import build_non_conflicting_path
 
@@ -33,14 +33,6 @@ class TargetPathNotDirectoryError(NotADirectoryError):
 
 
 class FileOrganizer:
-    @staticmethod
-    def _is_relative_to(path: Path, parent: Path) -> bool:
-        try:
-            path.relative_to(parent)
-            return True
-        except ValueError:
-            return False
-
     def __init__(
         self,
         target_dir: Optional[Path] = None,
@@ -91,7 +83,7 @@ class FileOrganizer:
             [self.target_dir]
             if self.recursive
             and self.target_dir != self.working_dir
-            and self._is_relative_to(self.target_dir, self.working_dir)
+            and self.target_dir.is_relative_to(self.working_dir)
             else []
         )
 
@@ -142,7 +134,7 @@ class FileOrganizer:
                     print("No extension specified for separation.")
                     return
 
-                SeparateByExtension(
+                separate_by_extension(
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
@@ -152,7 +144,7 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case SeparateChoices.DATE:
-                SeparateByDate(
+                separate_by_date(
                     dry_run=self.dry_run,
                     sort_date=self.sort_date,
                     target_dir=self.target_dir,
@@ -166,7 +158,7 @@ class FileOrganizer:
                     print("No extension specified for separation.")
                     return
 
-                SeparateByExtensionAndDate(
+                separate_by_extension_and_date(
                     sort_date=self.sort_date,
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
@@ -177,7 +169,7 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case SeparateChoices.FILE:
-                SeparateByFileType(
+                separate_by_file_type(
                     target_dir=self.target_dir,
                     working_dir=self.working_dir,
                     recursive=self.recursive,
@@ -200,7 +192,7 @@ class FileOrganizer:
                     print("No extension specified for merge.")
                     return
 
-                MergeByExtension(
+                merge_by_extension(
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
@@ -210,7 +202,7 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case SeparateChoices.DATE:
-                MergeByDate(
+                merge_by_date(
                     sort_date=self.sort_date,
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
@@ -224,7 +216,7 @@ class FileOrganizer:
                     print("No extension specified for merge.")
                     return
 
-                MergeByExtensionAndDate(
+                merge_by_extension_and_date(
                     sort_date=self.sort_date,
                     extension=self.sort_extension,
                     target_dir=self.target_dir,
@@ -235,7 +227,7 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case SeparateChoices.FILE:
-                MergeByFileType(
+                merge_by_file_type(
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
                     recursive=self.recursive,
