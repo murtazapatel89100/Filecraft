@@ -143,9 +143,6 @@ func filesFromWorkingDirs(dirs []string, recursive bool, excludedDirs []string) 
 	}
 
 	for _, dir := range roots {
-		// Only include exclusions that are within the current root so that
-		// ancestor exclusions (e.g. targetDir being a parent of workingDir)
-		// do not cause the entire root to be skipped.
 		rootExclusions := make([]string, 0, len(resolvedExcluded))
 		for _, excluded := range resolvedExcluded {
 			if excluded == dir {

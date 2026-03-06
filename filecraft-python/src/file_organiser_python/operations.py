@@ -185,8 +185,20 @@ def _move_file(
                     f"Insufficient free space while moving across filesystems. "
                     f"Required {src_size} bytes, available {free} bytes in {new_path.parent}.",
                 ) from exc
-            shutil.copy2(file_path, new_path)
-            file_path.unlink()
+            try:
+                shutil.copy2(file_path, new_path)
+                file_path.unlink()
+            except Exception as copy_exc:
+                try:
+                    new_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise OSError(
+                    exc.errno,
+                    f"Cross-filesystem move failed for {file_path} -> {new_path}; "
+                    "partial destination file has been removed. "
+                    "Original source file is intact.",
+                ) from copy_exc
         elif exc.errno == errno.ENOSPC:
             raise OSError(
                 errno.ENOSPC,
@@ -232,9 +244,6 @@ def _files_from_working_dirs(
 
     files: list[Path] = []
     for root in roots:
-        # Only include exclusions that are within the current root so that
-        # ancestor exclusions (e.g. target_dir being a parent of working_dir)
-        # do not cause the entire root to be skipped.
         effective = [
             ex for ex in abs_excluded if ex != root and ex.is_relative_to(root)
         ]

@@ -57,9 +57,9 @@ class FileOrganizer:
 
         self.working_dir = working_dir.resolve() if working_dir else Path.cwd()
         self.working_dirs = (
-            [path.resolve() for path in working_dirs]
-            if working_dirs
-            else [self.working_dir]
+            [self.working_dir]
+            if working_dirs is None
+            else [path.resolve() for path in working_dirs]
         )
         self.recursive = recursive
         self.dry_run = dry_run
