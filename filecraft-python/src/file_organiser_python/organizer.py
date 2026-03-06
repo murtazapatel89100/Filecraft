@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -8,6 +7,7 @@ from file_organiser_python.history import save_history
 from file_organiser_python.constants import HISTORY_FILE_PREFIX
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.operations import (
+    _files_from_working_dirs,
     SeparateByExtension,
     SeparateByDate,
     SeparateByExtensionAndDate,
@@ -90,30 +90,16 @@ class FileOrganizer:
         excluded_dirs = (
             [self.target_dir]
             if self.recursive
+            and self.target_dir != self.working_dir
             and self._is_relative_to(self.target_dir, self.working_dir)
             else []
         )
 
-        def _is_excluded(path: Path) -> bool:
-            return any(
-                self._is_relative_to(path, excluded) for excluded in excluded_dirs
-            )
-
-        if self.recursive:
-            files: list[Path] = []
-            for root, dirs, filenames in os.walk(self.working_dir, topdown=True):
-                root_path = Path(root)
-                dirs[:] = [
-                    dir_name
-                    for dir_name in dirs
-                    if not _is_excluded(root_path / dir_name)
-                ]
-                files.extend(root_path / file_name for file_name in filenames)
-        else:
-            files = [f for f in self.working_dir.iterdir() if f.is_file()]
-
-        if excluded_dirs:
-            files = [file for file in files if not _is_excluded(file)]
+        files = _files_from_working_dirs(
+            [self.working_dir],
+            recursive=self.recursive,
+            excluded_dirs=excluded_dirs,
+        )
 
         if not files:
             print("No files found in the working directory.")

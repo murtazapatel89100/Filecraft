@@ -138,7 +138,15 @@ func filesFromWorkingDirs(dirs []string, recursive bool, excludedDirs []string) 
 	}
 
 	for _, dir := range roots {
-		if shouldExcludePath(dir, resolvedExcluded) {
+		rootExclusions := make([]string, 0, len(resolvedExcluded))
+		for _, excluded := range resolvedExcluded {
+			if excluded == dir {
+				continue
+			}
+			rootExclusions = append(rootExclusions, excluded)
+		}
+
+		if shouldExcludePath(dir, rootExclusions) {
 			continue
 		}
 
@@ -148,7 +156,7 @@ func filesFromWorkingDirs(dirs []string, recursive bool, excludedDirs []string) 
 					return walkErr
 				}
 
-				if entry.IsDir() && shouldExcludePath(path, resolvedExcluded) {
+				if entry.IsDir() && path != dir && shouldExcludePath(path, rootExclusions) {
 					return filepath.SkipDir
 				}
 
@@ -171,7 +179,7 @@ func filesFromWorkingDirs(dirs []string, recursive bool, excludedDirs []string) 
 
 		for _, entry := range entries {
 			entryPath := filepath.Join(dir, entry.Name())
-			if entry.Type().IsRegular() && !shouldExcludePath(entryPath, resolvedExcluded) {
+			if entry.Type().IsRegular() && !shouldExcludePath(entryPath, rootExclusions) {
 				files = append(files, entryPath)
 			}
 		}

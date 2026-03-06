@@ -17,6 +17,7 @@ from file_organiser_python.organizer import (
 )
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.history import revert_history
+from file_organiser_python.operations import _files_from_working_dirs
 
 
 class TestOrganizerFixes(unittest.TestCase):
@@ -502,6 +503,34 @@ class TestOrganizerFixes(unittest.TestCase):
             (self.out / "order_2.txt").read_text(encoding="utf-8"),
             "from-b",
         )
+
+    def test_rename_recursive_target_equals_working_dir_processes_files(self) -> None:
+        (self.work / "same.txt").write_text("x", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.work,
+            working_dir=self.work,
+            recursive=True,
+        )
+        organizer.rename()
+
+        self.assertTrue((self.work / "1.txt").exists())
+
+    def test_files_from_working_dirs_recursive_filters_non_regular_entries(
+        self,
+    ) -> None:
+        if os.name == "nt" or not hasattr(os, "mkfifo"):
+            self.skipTest("mkfifo not available on this platform")
+
+        fifo_path = self.work / "named_pipe"
+        os.mkfifo(fifo_path)
+        regular_file = self.work / "a.txt"
+        regular_file.write_text("a", encoding="utf-8")
+
+        files = _files_from_working_dirs([self.work], recursive=True)
+
+        self.assertIn(regular_file, files)
+        self.assertNotIn(fifo_path, files)
 
     def test_merge_recursive_overlapping_working_dirs_avoids_duplicate_processing(
         self,

@@ -103,7 +103,11 @@ def _files_from_working_dirs(
 
     files: list[Path] = []
     for working_dir in _normalized_roots(working_dirs):
-        if _is_excluded_path(working_dir, normalized_exclusions):
+        effective_exclusions = [
+            excluded for excluded in normalized_exclusions if excluded != working_dir
+        ]
+
+        if _is_excluded_path(working_dir, effective_exclusions):
             continue
 
         if recursive:
@@ -113,18 +117,20 @@ def _files_from_working_dirs(
                 dirs[:] = [
                     dir_name
                     for dir_name in dirs
-                    if not _is_excluded_path(
-                        root_path / dir_name, normalized_exclusions
-                    )
+                    if not _is_excluded_path(root_path / dir_name, effective_exclusions)
                 ]
 
-                files.extend(root_path / file_name for file_name in filenames)
+                files.extend(
+                    candidate
+                    for candidate in (root_path / file_name for file_name in filenames)
+                    if candidate.is_file()
+                )
         else:
             files.extend(
                 [
                     f
                     for f in working_dir.iterdir()
-                    if f.is_file() and not _is_excluded_path(f, normalized_exclusions)
+                    if f.is_file() and not _is_excluded_path(f, effective_exclusions)
                 ]
             )
     return files

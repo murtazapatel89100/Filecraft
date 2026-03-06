@@ -522,6 +522,31 @@ func TestRenameRecursiveSortsByBasenameThenPath(t *testing.T) {
 	}
 }
 
+func TestRenameRecursiveDoesNotSkipRootWhenTargetEqualsWorkingDir(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+
+	mustWriteFile(t, filepath.Join(work, "keep.txt"), "content")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  work,
+		WorkingDir: work,
+		Recursive:  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Rename(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(work, "1.txt")); err != nil {
+		t.Fatalf("expected file to be processed when target equals working dir in recursive mode: %v", err)
+	}
+}
+
 func TestMergeRecursiveOverlappingWorkingDirsAvoidsDuplicateProcessing(t *testing.T) {
 	base := t.TempDir()
 	work := filepath.Join(base, "work")

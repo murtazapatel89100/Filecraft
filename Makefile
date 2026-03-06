@@ -16,9 +16,8 @@ help:
 release:
 	echo $(VERSION) > VERSION
 	cd filecraft-python && poetry version $(VERSION)
-	git add VERSION filecraft-python/pyproject.toml
-	cd ..
 	git cliff -o CHANGELOG.md
+	git add VERSION filecraft-python/pyproject.toml CHANGELOG.md
 	git commit -m "chore: release v$(VERSION)"
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin main
