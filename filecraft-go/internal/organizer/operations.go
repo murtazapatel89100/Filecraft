@@ -1,11 +1,13 @@
 package organizer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -80,16 +82,18 @@ func isCrossDeviceMoveError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "cross-device") || strings.Contains(msg, "cross device")
+	var linkErr *os.LinkError
+	if errors.As(err, &linkErr) {
+		return errors.Is(linkErr.Err, syscall.EXDEV)
+	}
+	return errors.Is(err, syscall.EXDEV)
 }
 
 func isNoSpaceError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "no space left on device")
+	return errors.Is(err, syscall.ENOSPC)
 }
 
 // ---------------------------------------------------------------------------

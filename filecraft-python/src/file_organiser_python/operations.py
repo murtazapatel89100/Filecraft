@@ -232,10 +232,12 @@ def _files_from_working_dirs(
 
     files: list[Path] = []
     for root in roots:
-        effective = [ex for ex in abs_excluded if ex != root]
-
-        if _is_excluded(root, effective):
-            continue
+        # Only include exclusions that are within the current root so that
+        # ancestor exclusions (e.g. target_dir being a parent of working_dir)
+        # do not cause the entire root to be skipped.
+        effective = [
+            ex for ex in abs_excluded if ex != root and ex.is_relative_to(root)
+        ]
 
         if recursive:
             for dirpath, dirnames, filenames in os.walk(root, topdown=True):
@@ -243,12 +245,16 @@ def _files_from_working_dirs(
                 dirnames[:] = [
                     d for d in dirnames if not _is_excluded(dp / d, effective)
                 ]
-                files.extend(c for c in (dp / fn for fn in filenames) if c.is_file())
+                files.extend(
+                    c
+                    for c in (dp / fn for fn in filenames)
+                    if c.is_file() and not c.is_symlink()
+                )
         else:
             files.extend(
                 f
                 for f in root.iterdir()
-                if f.is_file() and not _is_excluded(f, effective)
+                if f.is_file() and not f.is_symlink() and not _is_excluded(f, effective)
             )
 
     return files

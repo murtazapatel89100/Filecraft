@@ -291,9 +291,8 @@ class TestFileDiscoveryEdgeCases(unittest.TestCase):
         link.symlink_to(real)
         files = _files_from_working_dirs([self.work])
         names = [f.name for f in files]
-        # symlink.is_file() returns True, but the file is discovered;
-        # we mainly verify no crash and real file is included
         self.assertIn("real.txt", names)
+        self.assertNotIn("link.txt", names)
 
     def test_duplicate_working_dirs_deduped(self) -> None:
         (self.work / "a.txt").write_text("a", encoding="utf-8")
