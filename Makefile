@@ -14,6 +14,11 @@ help:
 	@echo "  make go-build"
 
 release:
+	@command -v git-cliff >/dev/null 2>&1 || { \
+		echo "Error: git-cliff is required for make release."; \
+		echo "Install with: cargo install git-cliff --locked"; \
+		exit 1; \
+	}
 	echo $(VERSION) > VERSION
 	cd filecraft-python && poetry version $(VERSION)
 	git cliff -o CHANGELOG.md

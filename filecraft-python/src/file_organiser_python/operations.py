@@ -1,6 +1,8 @@
 import os
+import errno
+import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from file_organiser_python.utils import (
     ensure_directory,
@@ -51,6 +53,102 @@ for ext in DISK_IMAGE_EXTENSIONS:
 
 KNOWN_EXTENSIONS = set(EXTENSION_TYPE_MAP.keys())
 KNOWN_FILE_TYPES = set(EXTENSION_TYPE_MAP.values()) | {"OTHERS"}
+
+
+def _paths_refer_to_same_file(source: Path, destination: Path) -> bool:
+    source_abs = source.absolute()
+    destination_abs = destination.absolute()
+
+    if source_abs == destination_abs:
+        return True
+
+    if not destination.exists():
+        return False
+
+    try:
+        return os.path.samefile(source_abs, destination_abs)
+    except OSError:
+        return False
+
+
+def _preflight_cross_device_space(
+    files: list[Path], destination_for_file: Callable[[Path], Path]
+) -> None:
+    required_bytes_by_device: dict[int, int] = {}
+    sample_path_by_device: dict[int, Path] = {}
+
+    for file_path in files:
+        destination_path = destination_for_file(file_path)
+
+        if _paths_refer_to_same_file(file_path, destination_path):
+            continue
+
+        destination_parent = destination_path.parent
+        destination_device = destination_parent.stat().st_dev
+
+        if file_path.stat().st_dev == destination_device:
+            continue
+
+        required_bytes_by_device[destination_device] = (
+            required_bytes_by_device.get(destination_device, 0) + file_path.stat().st_size
+        )
+        sample_path_by_device[destination_device] = destination_parent
+
+    for device, required_bytes in required_bytes_by_device.items():
+        sample_path = sample_path_by_device[device]
+        free_bytes = shutil.disk_usage(sample_path).free
+        if required_bytes > free_bytes:
+            raise OSError(
+                errno.ENOSPC,
+                (
+                    "Insufficient free space on destination filesystem. "
+                    f"Required {required_bytes} bytes, available {free_bytes} bytes in {sample_path}."
+                ),
+            )
+
+
+def _move_file(file_path: Path, destination_path: Path, dry_run: bool) -> Optional[Path]:
+    if _paths_refer_to_same_file(file_path, destination_path):
+        print(f"Skipping {file_path} (already at destination).")
+        return None
+
+    new_path = build_non_conflicting_path(destination_path)
+
+    if dry_run:
+        print(f"[DRY RUN] Would move {file_path} -> {new_path}...")
+        return new_path
+
+    print(f"Moving {file_path} -> {new_path}...")
+
+    try:
+        file_path.rename(new_path)
+    except OSError as exc:
+        if exc.errno == errno.EXDEV:
+            source_size = file_path.stat().st_size
+            free_bytes = shutil.disk_usage(new_path.parent).free
+            if source_size > free_bytes:
+                raise OSError(
+                    errno.ENOSPC,
+                    (
+                        "Insufficient free space while moving files across filesystems. "
+                        f"Required {source_size} bytes, available {free_bytes} bytes in {new_path.parent}."
+                    ),
+                ) from exc
+
+            shutil.copy2(file_path, new_path)
+            file_path.unlink()
+        elif exc.errno == errno.ENOSPC:
+            raise OSError(
+                errno.ENOSPC,
+                (
+                    f"Insufficient free space while moving {file_path} to {new_path}. "
+                    "Free space on the destination and retry."
+                ),
+            ) from exc
+        else:
+            raise
+
+    return new_path
 
 
 def _normalize_file_type(file_type: Optional[str]) -> Optional[tuple[str, str]]:
@@ -173,17 +271,23 @@ def SeparateByExtension(
         print(f"No files with extension '{extension}' found in {working_dir}.")
         return
 
+    if not dry_run:
+        _preflight_cross_device_space(
+            files,
+            lambda current_file: sorted_dir / current_file.name,
+        )
+
     for f in files:
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-        if dry_run:
-            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f.name} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:
@@ -236,17 +340,23 @@ def SeparateByDate(
         )
         return
 
+    if not dry_run:
+        _preflight_cross_device_space(
+            files,
+            lambda current_file: sorted_dir / current_file.name,
+        )
+
     for f in files:
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-        if dry_run:
-            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f.name} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:
@@ -298,21 +408,26 @@ def SeparateByExtensionAndDate(
         )
         return
 
+    if not dry_run:
+        _preflight_cross_device_space(
+            files,
+            lambda current_file: sorted_dir / current_file.name,
+        )
+
     revert_map: dict[str, str] = {}
     operation = "separate_by_extension_and_date"
 
     for f in files:
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-
-        if dry_run:
-            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f.name} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:
@@ -374,17 +489,16 @@ def SeparateByFileType(
 
         ensure_directory(sorted_dir, dry_run=dry_run)
 
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-
-        if dry_run:
-            print(f"[DRY RUN] Would move {f.name} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f.name} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
         moved_files += 1
 
     if moved_files == 0:
@@ -435,21 +549,26 @@ def MergeByExtension(
         )
         return
 
+    if not dry_run:
+        _preflight_cross_device_space(
+            files,
+            lambda current_file: sorted_dir / current_file.name,
+        )
+
     revert_map: dict[str, str] = {}
     operation = "merge_by_extension"
 
     for f in files:
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-
-        if dry_run:
-            print(f"[DRY RUN] Would move {f} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:
@@ -501,20 +620,26 @@ def MergeByDate(
         )
         return
 
+    if not dry_run:
+        _preflight_cross_device_space(
+            files,
+            lambda current_file: sorted_dir / current_file.name,
+        )
+
     revert_map: dict[str, str] = {}
     operation = "merge_by_date"
 
     for f in files:
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-        if dry_run:
-            print(f"[DRY RUN] Would move {f} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:
@@ -567,21 +692,26 @@ def MergeByExtensionAndDate(
         )
         return
 
+    if not dry_run:
+        _preflight_cross_device_space(
+            files,
+            lambda current_file: sorted_dir / current_file.name,
+        )
+
     revert_map: dict[str, str] = {}
     operation = "merge_by_extension_and_date"
 
     for f in files:
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-
-        if dry_run:
-            print(f"[DRY RUN] Would move {f} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:
@@ -624,17 +754,16 @@ def MergeByFileType(
 
         ensure_directory(sorted_dir, dry_run=dry_run)
 
-        destination_path = sorted_dir / f.name
-        new_path = build_non_conflicting_path(destination_path)
         original_path = f.resolve()
-
-        if dry_run:
-            print(f"[DRY RUN] Would move {f} -> {new_path}...")
+        moved_path = _move_file(
+            file_path=f,
+            destination_path=sorted_dir / f.name,
+            dry_run=dry_run,
+        )
+        if not moved_path or dry_run:
             continue
 
-        print(f"Moving {f} -> {new_path}...")
-        f.rename(new_path)
-        revert_map[str(new_path.resolve())] = str(original_path)
+        revert_map[str(moved_path.resolve())] = str(original_path)
 
     if history and not dry_run:
         if not history_path:

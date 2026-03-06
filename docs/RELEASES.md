@@ -43,6 +43,16 @@ For each valid version:
 
 ## Standard Release Process (Do This Every Time)
 
+### Prerequisites
+
+- `git-cliff` must be installed before running `make release` (used to generate `CHANGELOG.md`).
+
+Install example:
+
+```bash
+cargo install git-cliff --locked
+```
+
 ### 1) Update versions
 
 Update both files to the same version number (without `v`):

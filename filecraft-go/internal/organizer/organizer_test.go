@@ -579,6 +579,76 @@ func TestMergeRecursiveOverlappingWorkingDirsAvoidsDuplicateProcessing(t *testin
 	}
 }
 
+func TestSeparateExtensionRecursiveInPlaceSkipsAlreadySortedFile(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	sortedDir := filepath.Join(work, "PDF")
+
+	mustWriteFile(t, filepath.Join(sortedDir, "doc.pdf"), "already-sorted")
+	mustWriteFile(t, filepath.Join(work, "doc.pdf"), "source")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:  work,
+		WorkingDir: work,
+		Mode:       ModeExtension,
+		SortExt:    ".pdf",
+		Recursive:  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Separate(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(sortedDir, "doc.pdf")); err != nil {
+		t.Fatalf("expected already sorted file to remain: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(sortedDir, "doc_1.pdf")); err != nil {
+		t.Fatalf("expected source file moved with one suffix: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(sortedDir, "doc_2.pdf")); !os.IsNotExist(err) {
+		t.Fatalf("expected no extra self-conflict rename: %v", err)
+	}
+}
+
+func TestMergeExtensionRecursiveInPlaceSkipsAlreadySortedFile(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	sortedDir := filepath.Join(work, "PDF")
+
+	mustWriteFile(t, filepath.Join(sortedDir, "doc.pdf"), "already-sorted")
+	mustWriteFile(t, filepath.Join(work, "nested", "doc.pdf"), "source")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:   work,
+		WorkingDirs: []string{work},
+		Mode:        ModeExtension,
+		SortExt:     ".pdf",
+		Recursive:   true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Merge(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(sortedDir, "doc.pdf")); err != nil {
+		t.Fatalf("expected already sorted file to remain: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(sortedDir, "doc_1.pdf")); err != nil {
+		t.Fatalf("expected source file merged with one suffix: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(sortedDir, "doc_2.pdf")); !os.IsNotExist(err) {
+		t.Fatalf("expected no extra self-conflict rename: %v", err)
+	}
+}
+
 func TestSeparateFileTypeWithCategoryFilter(t *testing.T) {
 	base := t.TempDir()
 	work := filepath.Join(base, "work")

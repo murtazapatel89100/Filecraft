@@ -82,21 +82,17 @@ func moveFiles(files []string, destinationDir string, dryRun bool, out io.Writer
 	revertMap := map[string]string{}
 
 	for _, file := range files {
-		destinationPath := filepath.Join(destinationDir, filepath.Base(file))
-		newPath := buildNonConflictingPath(destinationPath)
 		originalPath, resolveErr := filepath.Abs(file)
 		if resolveErr != nil {
 			return revertMap, resolveErr
 		}
 
-		if dryRun {
-			fmt.Fprintf(out, "[DRY RUN] Would move %s → %s\n", file, newPath)
-			continue
+		newPath, skipped, moveErr := moveFile(file, filepath.Join(destinationDir, filepath.Base(file)), dryRun, out)
+		if moveErr != nil {
+			return revertMap, moveErr
 		}
-
-		fmt.Fprintf(out, "Moving %s → %s...\n", file, newPath)
-		if err := os.Rename(file, newPath); err != nil {
-			return revertMap, err
+		if skipped || dryRun {
+			continue
 		}
 
 		newResolved, resolveNewErr := filepath.Abs(newPath)
@@ -108,6 +104,132 @@ func moveFiles(files []string, destinationDir string, dryRun bool, out io.Writer
 	}
 
 	return revertMap, nil
+}
+
+func pathsReferToSameFile(source string, destination string) bool {
+	sourceAbs, sourceErr := filepath.Abs(source)
+	destinationAbs, destinationErr := filepath.Abs(destination)
+	if sourceErr != nil || destinationErr != nil {
+		return false
+	}
+
+	if sourceAbs == destinationAbs {
+		return true
+	}
+
+	sourceInfo, sourceStatErr := os.Stat(sourceAbs)
+	destinationInfo, destinationStatErr := os.Stat(destinationAbs)
+	if sourceStatErr != nil || destinationStatErr != nil {
+		return false
+	}
+
+	return os.SameFile(sourceInfo, destinationInfo)
+}
+
+func isCrossDeviceMoveError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "cross-device") || strings.Contains(message, "cross device")
+}
+
+func isNoSpaceError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "no space left on device")
+}
+
+func copyFileAndRemoveSource(source string, destination string) error {
+	sourceFile, sourceErr := os.Open(source)
+	if sourceErr != nil {
+		return sourceErr
+	}
+	defer sourceFile.Close()
+
+	sourceInfo, sourceInfoErr := sourceFile.Stat()
+	if sourceInfoErr != nil {
+		return sourceInfoErr
+	}
+
+	destinationFile, destinationErr := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, sourceInfo.Mode())
+	if destinationErr != nil {
+		return destinationErr
+	}
+
+	_, copyErr := io.Copy(destinationFile, sourceFile)
+	closeErr := destinationFile.Close()
+	if copyErr != nil {
+		_ = os.Remove(destination)
+		return copyErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(destination)
+		return closeErr
+	}
+
+	if timeErr := os.Chtimes(destination, sourceInfo.ModTime(), sourceInfo.ModTime()); timeErr != nil {
+		_ = os.Remove(destination)
+		return timeErr
+	}
+
+	if removeErr := os.Remove(source); removeErr != nil {
+		_ = os.Remove(destination)
+		return removeErr
+	}
+
+	return nil
+}
+
+func moveFile(file string, destinationPath string, dryRun bool, out io.Writer) (string, bool, error) {
+	if pathsReferToSameFile(file, destinationPath) {
+		fmt.Fprintf(out, "Skipping %s (already at destination).\n", file)
+		return destinationPath, true, nil
+	}
+
+	newPath := buildNonConflictingPath(destinationPath)
+
+	if dryRun {
+		fmt.Fprintf(out, "[DRY RUN] Would move %s → %s\n", file, newPath)
+		return newPath, false, nil
+	}
+
+	fmt.Fprintf(out, "Moving %s → %s...\n", file, newPath)
+	if err := os.Rename(file, newPath); err != nil {
+		if isCrossDeviceMoveError(err) {
+			copyErr := copyFileAndRemoveSource(file, newPath)
+			if copyErr == nil {
+				return newPath, false, nil
+			}
+
+			if isNoSpaceError(copyErr) {
+				return "", false, fmt.Errorf(
+					"insufficient free space while moving files across filesystems into %s: %w",
+					filepath.Dir(newPath),
+					copyErr,
+				)
+			}
+
+			return "", false, copyErr
+		}
+
+		if isNoSpaceError(err) {
+			return "", false, fmt.Errorf(
+				"insufficient free space while moving %s to %s: %w",
+				file,
+				newPath,
+				err,
+			)
+		}
+
+		return "", false, err
+	}
+
+	return newPath, false, nil
 }
 
 func (f *FileOrganizer) separateByExtension(out io.Writer) error {

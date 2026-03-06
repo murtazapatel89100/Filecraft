@@ -551,6 +551,52 @@ class TestOrganizerFixes(unittest.TestCase):
         self.assertTrue((self.out / "PDF" / "doc.pdf").exists())
         self.assertFalse((self.out / "PDF" / "doc_1.pdf").exists())
 
+    def test_separate_extension_recursive_in_place_skips_already_sorted_file(
+        self,
+    ) -> None:
+        sorted_dir = self.work / "PDF"
+        sorted_dir.mkdir(parents=True, exist_ok=True)
+
+        (sorted_dir / "doc.pdf").write_text("already-sorted", encoding="utf-8")
+        (self.work / "doc.pdf").write_text("source", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.work,
+            working_dir=self.work,
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.separate()
+
+        self.assertTrue((sorted_dir / "doc.pdf").exists())
+        self.assertTrue((sorted_dir / "doc_1.pdf").exists())
+        self.assertFalse((sorted_dir / "doc_2.pdf").exists())
+
+    def test_merge_extension_recursive_in_place_skips_already_sorted_file(
+        self,
+    ) -> None:
+        sorted_dir = self.work / "PDF"
+        sorted_dir.mkdir(parents=True, exist_ok=True)
+
+        (sorted_dir / "doc.pdf").write_text("already-sorted", encoding="utf-8")
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("source", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.work,
+            working_dirs=[self.work],
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.merge()
+
+        self.assertTrue((sorted_dir / "doc.pdf").exists())
+        self.assertTrue((sorted_dir / "doc_1.pdf").exists())
+        self.assertFalse((sorted_dir / "doc_2.pdf").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
