@@ -12,6 +12,7 @@ func newMergeCmd() *cobra.Command {
 	var sortDate string
 	var targetDir string
 	var workingDirs []string
+	var recursive bool
 	var dryRun bool
 	var saveHistory bool
 
@@ -38,6 +39,7 @@ func newMergeCmd() *cobra.Command {
 				SortDate:    sortDate,
 				TargetDir:   resolvedTargetDir,
 				WorkingDirs: workingDirs,
+				Recursive:   recursive,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,
 			}
@@ -56,6 +58,7 @@ func newMergeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&sortDate, "date", "", "Date in YYYY-MM-DD format")
 	cmd.Flags().StringVar(&targetDir, "target-dir", "", "Where merged files are moved")
 	cmd.Flags().StringSliceVar(&workingDirs, "working-dir", nil, "One or more source directories to merge from")
+	cmd.Flags().BoolVar(&recursive, "recursive", false, "Recursively include files from all subdirectories of every --working-dir")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview actions without making changes")
 	cmd.Flags().BoolVar(&saveHistory, "history", false, "Save operation history")
 

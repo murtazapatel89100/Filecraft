@@ -1,5 +1,5 @@
-from pathlib import Path
 import json
+from pathlib import Path
 from typing import Dict, Optional
 
 from file_organiser_python.utils import build_non_conflicting_path
@@ -30,10 +30,22 @@ def load_latest_history(directory: Path) -> Path | None:
 
 
 def read_history(history_path: Path) -> Dict[str, str]:
-    with open(history_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(history_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"Corrupted history file (invalid JSON): {history_path}"
+        ) from exc
 
-    return data.get("mappings", {})
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid history file format: {history_path}")
+
+    mappings = data.get("mappings", {})
+    if not isinstance(mappings, dict):
+        raise ValueError(f"Invalid mappings in history file: {history_path}")
+
+    return mappings
 
 
 def delete_history(history_path: Path) -> None:
@@ -56,10 +68,12 @@ def revert_history(
             print(f"No history file found in {directory}")
             return 0
 
-    with open(history_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        mappings = read_history(history_path)
+    except ValueError as exc:
+        print(str(exc))
+        return 0
 
-    mappings: Dict[str, str] = data.get("mappings", {})
     if not mappings:
         print(f"No mappings found in history file: {history_path}")
         return 0

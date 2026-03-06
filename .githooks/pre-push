@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# pre-push hook: run tests for both Python and Go.
+set -euo pipefail
+
+echo "==> [pre-push] Running Python tests..."
+cd filecraft-python
+if command -v poetry &>/dev/null; then
+    poetry run python -m unittest discover -s tests -p "test_*.py"
+else
+    echo "ERROR: Poetry not found. Python tests cannot run."
+    echo "Please run the tests manually:"
+    echo "  python -m unittest discover -s tests -p 'test_*.py'"
+    echo "Fix any failures and push again."
+    exit 1
+fi
+cd ..
+
+echo "==> [pre-push] Running Go tests..."
+cd filecraft-go
+if ! command -v go &>/dev/null; then
+    echo "ERROR: Go is not installed. Go tests cannot run."
+    echo "Please install Go and run:"
+    echo "  go test ./..."
+    echo "Then push again."
+    exit 1
+fi
+
+go test ./...
+cd ..
+
+echo "==> [pre-push] All tests passed."
