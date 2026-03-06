@@ -1,19 +1,5 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:poetry",
     "python-envs.defaultPackageManager": "ms-python.python:poetry",
-    "python.defaultInterpreterPath": "${workspaceFolder}/filecraft-python/.venv/bin/python",
-    "chat.tools.terminal.autoApprove": {
-        "/^cd /home/maniac/Python/organizer-cli/filecraft-python && /home/maniac/Python/organizer-cli/filecraft-python/\\.venv/bin/python -m unittest discover -s tests -p \"test_\\*\\.py\"$/": {
-            "approve": true,
-            "matchCommandLine": true
-        },
-        "/^cd /home/maniac/Python/organizer-cli/filecraft-python && /home/maniac/Python/organizer-cli/filecraft-python/\\.venv/bin/python -m unittest tests\\.test_organizer\\.TestOrganizerFixes\\.test_files_from_working_dirs_recursive_filters_non_regular_entries$/": {
-            "approve": true,
-            "matchCommandLine": true
-        },
-        "/^/home/maniac/Python/organizer-cli/filecraft-python/\\.venv/bin/python -m unittest discover -s tests -p \"test_\\*\\.py\"$/": {
-            "approve": true,
-            "matchCommandLine": true
-        }
-    }
+    "python.defaultInterpreterPath": "${workspaceFolder}/filecraft-python/.venv/bin/python"
 }
