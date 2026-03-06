@@ -87,9 +87,14 @@ def _files_from_working_dirs(
     def _is_excluded_path(path: Path, exclusions: list[Path]) -> bool:
         return any(_is_relative_to(path, excluded) for excluded in exclusions)
 
+    def _normalize_path(path: Path) -> Path:
+        if path.is_absolute():
+            return path
+        return path.absolute()
+
     def _normalized_roots(paths: list[Path]) -> list[Path]:
         resolved = sorted(
-            {path.resolve() for path in paths},
+            {_normalize_path(path) for path in paths},
             key=lambda path: (len(path.parts), str(path)),
         )
         roots: list[Path] = []
@@ -99,7 +104,7 @@ def _files_from_working_dirs(
             roots.append(candidate)
         return roots
 
-    normalized_exclusions = [path.resolve() for path in excluded_dirs or []]
+    normalized_exclusions = [_normalize_path(path) for path in excluded_dirs or []]
 
     files: list[Path] = []
     for working_dir in _normalized_roots(working_dirs):
