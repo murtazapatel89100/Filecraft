@@ -9,9 +9,21 @@ wrappers that supply a file filter and a per-file destination builder.
 import errno
 import os
 import shutil
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Callable, Optional
+
+
+def _safe_print(message: str) -> None:
+    """Print *message*, replacing unencodable characters on narrow-codec terminals (e.g. cp1252 on Windows)."""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", "utf-8") or "utf-8"
+        safe = message.encode(encoding, errors="backslashreplace").decode(encoding)
+        print(safe)
+
 
 from file_organiser_python.constants import (
     ARCHIVE_EXTENSIONS,
@@ -150,16 +162,16 @@ def _move_file(
 ) -> Optional[Path]:
     """Move *file_path* to *destination_path*, handling conflicts and cross-device moves."""
     if _paths_refer_to_same_file(file_path, destination_path):
-        print(f"Skipping {file_path} (already at destination).")
+        _safe_print(f"Skipping {file_path} (already at destination).")
         return None
 
     new_path = build_non_conflicting_path(destination_path)
 
     if dry_run:
-        print(f"[DRY RUN] Would move {file_path} -> {new_path}...")
+        _safe_print(f"[DRY RUN] Would move {file_path} -> {new_path}...")
         return new_path
 
-    print(f"Moving {file_path} -> {new_path}...")
+    _safe_print(f"Moving {file_path} -> {new_path}...")
 
     try:
         file_path.rename(new_path)
@@ -262,7 +274,7 @@ def _organize_files(
     history_path: Optional[Path] = None,
 ) -> None:
     """Discover -> filter -> create dirs -> preflight -> move -> save history."""
-    print(header_message)
+    _safe_print(header_message)
 
     files = [
         f
@@ -273,7 +285,7 @@ def _organize_files(
     ]
 
     if not files:
-        print(no_match_message)
+        _safe_print(no_match_message)
         return
 
     # Ensure every unique destination directory exists.
@@ -297,7 +309,7 @@ def _organize_files(
 
     if history and not dry_run and revert_map:
         if not history_path:
-            print("Failed to validate History path, cannot save history.")
+            _safe_print("Failed to validate History path, cannot save history.")
             return
         save_history(
             history_path=history_path, revert_map=revert_map, operation=operation
@@ -440,7 +452,7 @@ def separate_by_file_type(
 ) -> None:
     selected = normalize_file_type(file_type)
     if selected and selected[0] == "invalid":
-        print(f"Unsupported file type filter '{file_type}'.")
+        _safe_print(f"Unsupported file type filter '{file_type}'.")
         return
 
     def _filter(f: Path) -> bool:
