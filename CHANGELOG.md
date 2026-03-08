@@ -3,6 +3,10 @@
 ### 🚀 Features
 
 - Add recursive file discovery to rename, separate, and merge com… (#10)
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.1.0
 ## [1.0.3] - 2026-03-04
 
 ### ⚙️ Miscellaneous Tasks
