@@ -1,3 +1,16 @@
+## [unreleased]
+
+### 🚀 Features
+
+- Add recursive file discovery to rename, separate, and merge com… (#10)
+## [1.0.3] - 2026-03-04
+
+### ⚙️ Miscellaneous Tasks
+
+- Update CHANGELOG.md
+- Update README docs
+- Update README docs for python
+- Release v1.0.3
 ## [1.0.2] - 2026-03-04
 
 ### 📚 Documentation
