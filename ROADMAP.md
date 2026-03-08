@@ -2,7 +2,6 @@
 
 ## File Discovery
 
-- Recursive directory traversal
 - Include pattern filtering (`--include`)
 - Ignore pattern filtering (`--ignore`)
 - File size filtering (`--min-size`, `--max-size`)
