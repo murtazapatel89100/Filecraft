@@ -13,6 +13,7 @@ func newSeparateCmd() *cobra.Command {
 	var sortDate string
 	var targetDir string
 	var workingDir string
+	var recursive bool
 	var dryRun bool
 	var saveHistory bool
 
@@ -40,6 +41,7 @@ func newSeparateCmd() *cobra.Command {
 				SortDate:    sortDate,
 				TargetDir:   resolvedTargetDir,
 				WorkingDir:  workingDir,
+				Recursive:   recursive,
 				DryRun:      dryRun,
 				SaveHistory: saveHistory,
 			}
@@ -59,6 +61,7 @@ func newSeparateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&sortDate, "date", "", "Date in YYYY-MM-DD format")
 	cmd.Flags().StringVar(&targetDir, "target-dir", "", "Where separated files are moved")
 	cmd.Flags().StringVar(&workingDir, "working-dir", "", "Source directory to process")
+	cmd.Flags().BoolVar(&recursive, "recursive", false, "Recursively include files from all subdirectories")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview actions without making changes")
 	cmd.Flags().BoolVar(&saveHistory, "history", false, "Save operation history")
 

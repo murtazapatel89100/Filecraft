@@ -17,6 +17,7 @@ from file_organiser_python.organizer import (
 )
 from file_organiser_python.enums import SeparateChoices
 from file_organiser_python.history import revert_history
+from file_organiser_python.operations import _files_from_working_dirs
 
 
 class TestOrganizerFixes(unittest.TestCase):
@@ -369,6 +370,232 @@ class TestOrganizerFixes(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Unsupported file type filter", result.output)
         self.assertTrue((self.work / "paper.pdf").exists())
+
+    def test_separate_extension_recursive_finds_nested_files(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("pdf", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dir=self.work,
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.separate()
+
+        self.assertTrue((self.out / "PDF" / "doc.pdf").exists())
+
+    def test_separate_extension_non_recursive_ignores_nested_files(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("pdf", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dir=self.work,
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+        )
+        organizer.separate()
+
+        self.assertFalse((self.out / "PDF" / "doc.pdf").exists())
+        self.assertTrue((nested / "doc.pdf").exists())
+
+    def test_merge_recursive_across_multiple_working_dirs(self) -> None:
+        nested_one = self.work / "a"
+        nested_two = self.work2 / "b"
+        nested_one.mkdir(parents=True, exist_ok=True)
+        nested_two.mkdir(parents=True, exist_ok=True)
+
+        (nested_one / "one.pdf").write_text("1", encoding="utf-8")
+        (nested_two / "two.pdf").write_text("2", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / "PDF" / "one.pdf").exists())
+        self.assertTrue((self.out / "PDF" / "two.pdf").exists())
+
+    def test_separate_recursive_dry_run_does_not_move_files(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        file_path = nested / "dry.pdf"
+        file_path.write_text("pdf", encoding="utf-8")
+
+        result = self.runner.invoke(
+            app,
+            [
+                "separate",
+                "--mode",
+                "extension",
+                "--extension",
+                "pdf",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(self.out),
+                "--recursive",
+                "--dry-run",
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("[DRY RUN] Would move", result.output)
+        self.assertTrue(file_path.exists())
+        self.assertFalse((self.out / "PDF" / "dry.pdf").exists())
+
+    def test_rename_recursive_excludes_target_subtree_within_working_dir(self) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+
+        target_inside_work = self.work / "out"
+        target_inside_work.mkdir(parents=True, exist_ok=True)
+        (target_inside_work / "existing.txt").write_text("existing", encoding="utf-8")
+        (target_inside_work / "archived" / "older.txt").parent.mkdir(
+            parents=True, exist_ok=True
+        )
+        (target_inside_work / "archived" / "older.txt").write_text(
+            "older", encoding="utf-8"
+        )
+
+        (nested / "source.txt").write_text("source", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=target_inside_work,
+            working_dir=self.work,
+            recursive=True,
+            renameWith="doc",
+        )
+        organizer.rename()
+
+        self.assertTrue((target_inside_work / "doc_1.txt").exists())
+        self.assertTrue((target_inside_work / "existing.txt").exists())
+        self.assertTrue((target_inside_work / "archived" / "older.txt").exists())
+
+    def test_rename_recursive_sorts_by_basename_then_path(self) -> None:
+        (self.work / "a").mkdir(parents=True, exist_ok=True)
+        (self.work / "b").mkdir(parents=True, exist_ok=True)
+
+        (self.work / "a" / "same.txt").write_text("from-a", encoding="utf-8")
+        (self.work / "b" / "same.txt").write_text("from-b", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dir=self.work,
+            recursive=True,
+            renameWith="order",
+        )
+        organizer.rename()
+
+        self.assertEqual(
+            (self.out / "order_1.txt").read_text(encoding="utf-8"),
+            "from-a",
+        )
+        self.assertEqual(
+            (self.out / "order_2.txt").read_text(encoding="utf-8"),
+            "from-b",
+        )
+
+    def test_rename_recursive_target_equals_working_dir_processes_files(self) -> None:
+        (self.work / "same.txt").write_text("x", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.work,
+            working_dir=self.work,
+            recursive=True,
+        )
+        organizer.rename()
+
+        self.assertTrue((self.work / "1.txt").exists())
+
+    def test_files_from_working_dirs_recursive_filters_non_regular_entries(
+        self,
+    ) -> None:
+        if os.name == "nt" or not hasattr(os, "mkfifo"):
+            self.skipTest("mkfifo not available on this platform")
+
+        fifo_path = self.work / "named_pipe"
+        os.mkfifo(fifo_path)
+        regular_file = self.work / "a.txt"
+        regular_file.write_text("a", encoding="utf-8")
+
+        files = _files_from_working_dirs([self.work], recursive=True)
+
+        self.assertIn(regular_file, files)
+        self.assertNotIn(fifo_path, files)
+
+    def test_merge_recursive_overlapping_working_dirs_avoids_duplicate_processing(
+        self,
+    ) -> None:
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("pdf", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, nested],
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / "PDF" / "doc.pdf").exists())
+        self.assertFalse((self.out / "PDF" / "doc_1.pdf").exists())
+
+    def test_separate_extension_recursive_in_place_skips_already_sorted_file(
+        self,
+    ) -> None:
+        sorted_dir = self.work / "PDF"
+        sorted_dir.mkdir(parents=True, exist_ok=True)
+
+        (sorted_dir / "doc.pdf").write_text("already-sorted", encoding="utf-8")
+        (self.work / "doc.pdf").write_text("source", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.work,
+            working_dir=self.work,
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.separate()
+
+        self.assertTrue((sorted_dir / "doc.pdf").exists())
+        self.assertTrue((sorted_dir / "doc_1.pdf").exists())
+        self.assertFalse((sorted_dir / "doc_2.pdf").exists())
+
+    def test_merge_extension_recursive_in_place_skips_already_sorted_file(
+        self,
+    ) -> None:
+        sorted_dir = self.work / "PDF"
+        sorted_dir.mkdir(parents=True, exist_ok=True)
+
+        (sorted_dir / "doc.pdf").write_text("already-sorted", encoding="utf-8")
+        nested = self.work / "nested"
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "doc.pdf").write_text("source", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.work,
+            working_dirs=[self.work],
+            separate_choice=SeparateChoices.EXTENSION,
+            sort_extension=".pdf",
+            recursive=True,
+        )
+        organizer.merge()
+
+        self.assertTrue((sorted_dir / "doc.pdf").exists())
+        self.assertTrue((sorted_dir / "doc_1.pdf").exists())
+        self.assertFalse((sorted_dir / "doc_2.pdf").exists())
 
 
 if __name__ == "__main__":

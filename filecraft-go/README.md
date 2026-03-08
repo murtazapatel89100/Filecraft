@@ -48,6 +48,7 @@ By default names are numeric (`1.ext`, `2.ext`, ...); with `--rename-with` they 
 
 - `--working-dir PATH` (default: current directory)
 - `--target-dir PATH` (default: current directory)
+- `--recursive` (include files from subdirectories at unlimited depth)
 - `--dry-run`
 - `--history` (save history file for revert)
 - `--rename-with TEXT` (optional base name prefix, e.g. `invoice`)
@@ -81,6 +82,7 @@ Separates files according to mode.
 - `--date YYYY-MM-DD` (used by `date` and `extension_and_date`; validated)
 - `--working-dir PATH` (default: current directory)
 - `--target-dir PATH` (default: current directory)
+- `--recursive` (include files from subdirectories at unlimited depth)
 - `--dry-run`
 - `--history`
 
@@ -112,8 +114,11 @@ Merges files from multiple `working_dir` locations into a single `target_dir`.
 - `--date YYYY-MM-DD` (used by `date` and `extension_and_date`; validated)
 - `--working-dir PATH` (required, repeat for multiple source directories)
 - `--target-dir PATH` (default: current directory)
+- `--recursive` (include files from subdirectories at unlimited depth)
 - `--dry-run`
 - `--history`
+
+When `--recursive` is set and multiple `--working-dir` flags are provided, Filecraft traverses all listed working directories recursively.
 
 ### Merge Examples
 
