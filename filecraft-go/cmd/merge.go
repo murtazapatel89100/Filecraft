@@ -9,6 +9,7 @@ import (
 func newMergeCmd() *cobra.Command {
 	var mode string
 	var extension string
+	var fileType string
 	var sortDate string
 	var targetDir string
 	var workingDirs []string
@@ -36,6 +37,7 @@ func newMergeCmd() *cobra.Command {
 			cfg := organizer.Config{
 				Mode:        organizer.Mode(mode),
 				SortExt:     normalizeExtension(extension),
+				FileType:    fileType,
 				SortDate:    sortDate,
 				TargetDir:   resolvedTargetDir,
 				WorkingDirs: workingDirs,
@@ -55,6 +57,7 @@ func newMergeCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&mode, "mode", string(organizer.ModeExtension), "How to merge files: extension, date, extension_and_date, file")
 	cmd.Flags().StringVar(&extension, "extension", "", "Extension to filter, e.g. .pdf or pdf")
+	cmd.Flags().StringVar(&fileType, "file-type", "", "File type filter for --mode file (e.g. documents, images, pdf)")
 	cmd.Flags().StringVar(&sortDate, "date", "", "Date in YYYY-MM-DD format")
 	cmd.Flags().StringVar(&targetDir, "target-dir", "", "Where merged files are moved")
 	cmd.Flags().StringSliceVar(&workingDirs, "working-dir", nil, "One or more source directories to merge from")

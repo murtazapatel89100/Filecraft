@@ -232,6 +232,11 @@ def merge(
         "--extension",
         help="Extension to filter, e.g. .pdf or pdf.",
     ),
+    file_type: Optional[str] = typer.Option(
+        None,
+        "--file-type",
+        help="File type filter for --mode file (e.g. documents, images, pdf).",
+    ),
     sort_date: Optional[str] = typer.Option(
         None,
         "--date",
@@ -266,6 +271,7 @@ def merge(
             save_history=history,
             sort_date=sort_date,
             sort_extension=normalized_extension,
+            file_type=file_type,
             separate_choice=mode,
         )
     except (MissingTargetDirectoryError, TargetPathNotDirectoryError) as exc:

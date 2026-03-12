@@ -40,6 +40,9 @@ For each valid version:
 - Uploads artifacts
 - Publishes a GitHub Release
 - Auto-generates release notes (`generate_release_notes: true`)
+- Publishes to AUR:
+  - [`filecraft-cli`](https://aur.archlinux.org/packages/filecraft-cli) (Python package)
+  - [`filecraft-cli-bin`](https://aur.archlinux.org/packages/filecraft-cli-bin) (Go binary)
 
 ## Standard Release Process (Do This Every Time)
 
@@ -116,6 +119,19 @@ For `filecraft-cli`, add a PyPI Trusted Publisher that matches:
 - Owner: `murtazapatel89100`
 - Repository: `Filecraft`
 - Workflow filename: `release.yml`
+
+### 6) Configure AUR SSH key (one-time)
+
+The release workflow publishes updated PKGBUILDs to the AUR via SSH.
+
+1. Generate an SSH key pair for AUR:
+   ```bash
+   ssh-keygen -t ed25519 -C "filecraft-aur" -f aur_ed25519 -N ""
+   ```
+2. Add the **public** key (`aur_ed25519.pub`) to your AUR account at https://aur.archlinux.org/account/
+3. Add the **private** key as a GitHub repository secret named `AUR_SSH_PRIVATE_KEY`.
+4. Add your AUR username as a GitHub repository secret named `AUR_USERNAME`.
+5. Set the Git author email for AUR commits as a GitHub repository secret named `AUR_EMAIL`.
 
 ## How Not to Break the Pattern
 

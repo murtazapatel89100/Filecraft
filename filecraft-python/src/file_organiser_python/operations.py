@@ -615,24 +615,44 @@ def merge_by_file_type(
     target_dir: Path,
     working_dirs: list[Path],
     recursive: bool,
+    file_type: Optional[str] = None,
     history: bool = False,
     history_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> None:
+    selected = normalize_file_type(file_type)
+    if selected and selected[0] == "invalid":
+        _safe_print(f"Unsupported file type filter '{file_type}'.")
+        return
+
+    def _filter(f: Path) -> bool:
+        if not selected:
+            return True
+        kind, value = selected
+        if kind == "category":
+            return _category_for_file(f) == value
+        return get_extension(f, KNOWN_EXTENSIONS) == value  # extension filter
+
     def _dest(f: Path) -> Path:
         return target_dir / _category_for_file(f) / f.name
+
+    label = f"with filter {file_type}" if selected else "by file type"
 
     _organize_files(
         working_dirs=working_dirs,
         target_dir=target_dir,
-        file_filter=lambda _: True,
+        file_filter=_filter,
         dest_for_file=_dest,
         operation="merge_by_file_type",
         header_message=(
-            f"Merging all files by file type from {len(working_dirs)} "
+            f"Merging files {label} from {len(working_dirs)} "
             f"directories -> {target_dir}"
         ),
-        no_match_message="No files found in provided working directories.",
+        no_match_message=(
+            f"No files found for file type '{file_type}' in provided working directories."
+            if file_type
+            else "No files found in provided working directories."
+        ),
         recursive=recursive,
         dry_run=dry_run,
         history=history,

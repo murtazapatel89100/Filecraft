@@ -11,6 +11,7 @@ This is the Go implementation of Filecraft, optimized for standalone binary usag
 ## Distribution
 
 - Primary channel: GitHub Releases (`Filecraft` binaries)
+- AUR: [`filecraft-cli-bin`](https://aur.archlinux.org/packages/filecraft-cli-bin)
 - Planned channel: Homebrew (future)
 - CLI command/binary name: `filecraft` (or `Filecraft` from release artifacts)
 
@@ -111,6 +112,7 @@ Merges files from multiple `working_dir` locations into a single `target_dir`.
 
 - `--mode [extension|date|extension_and_date|file]` (default: `extension`)
 - `--extension TEXT` (required for `extension` and `extension_and_date`)
+- `--file-type TEXT` (optional for `file`; accepts category like `documents` or extension like `pdf`)
 - `--date YYYY-MM-DD` (used by `date` and `extension_and_date`; validated)
 - `--working-dir PATH` (required, repeat for multiple source directories)
 - `--target-dir PATH` (default: current directory)
@@ -127,6 +129,8 @@ When `--recursive` is set and multiple `--working-dir` flags are provided, Filec
 ./Filecraft merge --mode date --date 2026-03-01 --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
 ./Filecraft merge --mode extension_and_date --extension .jpg --date 2026-03-01 --working-dir ./camera --working-dir ./phone --target-dir ./merged
 ./Filecraft merge --mode file --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
+./Filecraft merge --mode file --file-type documents --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
+./Filecraft merge --mode file --file-type pdf --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
 ```
 
 ## `revert`

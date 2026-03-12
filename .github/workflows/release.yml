@@ -233,3 +233,204 @@ jobs:
           generate_release_notes: true
           files: |
             release-artifacts/**/*
+
+  publish-aur-python:
+    name: Publish filecraft-cli to AUR (Python)
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - publish-pypi
+      - publish-release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up SSH for AUR
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Add AUR host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Clone AUR repo
+        run: git clone ssh://aur@aur.archlinux.org/filecraft-cli.git aur-python
+
+      - name: Fetch PyPI source tarball checksum
+        id: pypi_sha
+        shell: bash
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          tag_version="${version#v}"
+          sdist_url="https://files.pythonhosted.org/packages/source/f/filecraft-cli/filecraft_cli-${tag_version}.tar.gz"
+          for i in 1 2 3 4 5; do
+            sha256=$(curl -fsSL "$sdist_url" 2>/dev/null | sha256sum | awk '{print $1}')
+            if [ -n "$sha256" ] && [ "$sha256" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+              break
+            fi
+            echo "Waiting for PyPI propagation (attempt $i)..."
+            sleep 15
+          done
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "tag_version=$tag_version" >> "$GITHUB_OUTPUT"
+
+      - name: Generate PKGBUILD and .SRCINFO
+        shell: bash
+        run: |
+          tag_version="${{ steps.pypi_sha.outputs.tag_version }}"
+          sha256="${{ steps.pypi_sha.outputs.sha256 }}"
+
+          cat > aur-python/PKGBUILD <<PKGBUILD_EOF
+          # Maintainer: Filecraft <murtazapatel89100@gmail.com>
+          pkgname=filecraft-cli
+          pkgver=${tag_version}
+          pkgrel=1
+          pkgdesc="A CLI organizer you didn't know you needed — yet. (Python)"
+          arch=('any')
+          url="https://github.com/murtazapatel89100/Filecraft"
+          license=('MIT')
+          depends=('python' 'python-typer')
+          makedepends=('python-build' 'python-installer' 'python-wheel' 'python-poetry-core')
+          source=("https://files.pythonhosted.org/packages/source/f/filecraft-cli/filecraft_cli-\${pkgver}.tar.gz")
+          sha256sums=('${sha256}')
+
+          build() {
+            cd "filecraft_cli-\${pkgver}"
+            python -m build --wheel --no-isolation
+          }
+
+          package() {
+            cd "filecraft_cli-\${pkgver}"
+            python -m installer --destdir="\$pkgdir" dist/*.whl
+            install -Dm644 LICENSE "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
+          }
+          PKGBUILD_EOF
+
+          cat > aur-python/.SRCINFO <<SRCINFO_EOF
+          pkgbase = filecraft-cli
+          	pkgdesc = A CLI organizer you didn't know you needed — yet. (Python)
+          	pkgver = ${tag_version}
+          	pkgrel = 1
+          	url = https://github.com/murtazapatel89100/Filecraft
+          	arch = any
+          	license = MIT
+          	makedepends = python-build
+          	makedepends = python-installer
+          	makedepends = python-wheel
+          	makedepends = python-poetry-core
+          	depends = python
+          	depends = python-typer
+          	source = https://files.pythonhosted.org/packages/source/f/filecraft-cli/filecraft_cli-${tag_version}.tar.gz
+          	sha256sums = ${sha256}
+
+          pkgname = filecraft-cli
+          SRCINFO_EOF
+
+      - name: Push to AUR
+        working-directory: aur-python
+        run: |
+          git config user.name "${{ secrets.AUR_USERNAME }}"
+          git config user.email "${{ secrets.AUR_EMAIL }}"
+          git add PKGBUILD .SRCINFO
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Update to ${{ needs.prepare.outputs.version }}"
+          git push
+
+  publish-aur-go:
+    name: Publish filecraft-cli-bin to AUR (Go binary)
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - publish-release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up SSH for AUR
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Add AUR host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Clone AUR repo
+        run: git clone ssh://aur@aur.archlinux.org/filecraft-cli-bin.git aur-go
+
+      - name: Compute checksums and generate PKGBUILD
+        id: go_sha
+        shell: bash
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          tag_version="${version#v}"
+          binary_url="https://github.com/murtazapatel89100/Filecraft/releases/download/${version}/Filecraft-${version}-linux-amd64"
+          license_url="https://raw.githubusercontent.com/murtazapatel89100/Filecraft/${version}/LICENSE"
+
+          for i in 1 2 3 4 5; do
+            sha256=$(curl -fsSL "$binary_url" 2>/dev/null | sha256sum | awk '{print $1}')
+            if [ -n "$sha256" ] && [ "$sha256" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+              break
+            fi
+            echo "Waiting for release asset propagation (attempt $i)..."
+            sleep 15
+          done
+
+          license_sha=$(curl -fsSL "$license_url" | sha256sum | awk '{print $1}')
+
+          cat > aur-go/PKGBUILD <<PKGBUILD_EOF
+          # Maintainer: Filecraft <murtazapatel89100@gmail.com>
+          pkgname=filecraft-cli-bin
+          pkgver=${tag_version}
+          pkgrel=1
+          pkgdesc="A CLI organizer you didn't know you needed — yet. (Go binary)"
+          arch=('x86_64')
+          url="https://github.com/murtazapatel89100/Filecraft"
+          license=('MIT')
+          provides=('filecraft')
+          conflicts=('filecraft-cli')
+          source=("Filecraft-v${tag_version}-linux-amd64::${binary_url}"
+                  "LICENSE::${license_url}")
+          sha256sums=('${sha256}'
+                      '${license_sha}')
+
+          package() {
+            install -Dm755 "Filecraft-v${tag_version}-linux-amd64" "\$pkgdir/usr/bin/filecraft"
+            install -Dm644 LICENSE "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
+          }
+          PKGBUILD_EOF
+
+          cat > aur-go/.SRCINFO <<SRCINFO_EOF
+          pkgbase = filecraft-cli-bin
+          	pkgdesc = A CLI organizer you didn't know you needed — yet. (Go binary)
+          	pkgver = ${tag_version}
+          	pkgrel = 1
+          	url = https://github.com/murtazapatel89100/Filecraft
+          	arch = x86_64
+          	license = MIT
+          	provides = filecraft
+          	conflicts = filecraft-cli
+          	source = Filecraft-v${tag_version}-linux-amd64::${binary_url}
+          	source = LICENSE::${license_url}
+          	sha256sums = ${sha256}
+          	sha256sums = ${license_sha}
+
+          pkgname = filecraft-cli-bin
+          SRCINFO_EOF
+
+          echo "tag_version=$tag_version" >> "$GITHUB_OUTPUT"
+
+      - name: Push to AUR
+        working-directory: aur-go
+        run: |
+          git config user.name "${{ secrets.AUR_USERNAME }}"
+          git config user.email "${{ secrets.AUR_EMAIL }}"
+          git add PKGBUILD .SRCINFO
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Update to ${{ needs.prepare.outputs.version }}"
+          git push
