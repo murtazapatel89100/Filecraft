@@ -41,7 +41,9 @@ func newRenameCmd() *cobra.Command {
 				return err
 			}
 
-			return fo.Rename(cmd.OutOrStdout())
+			return runWithSpinner("Renaming files", cmd.ErrOrStderr(), func() error {
+				return fo.Rename(cmd.OutOrStdout())
+			})
 		},
 	}
 
