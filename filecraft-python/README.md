@@ -32,6 +32,7 @@ https://github.com/murtazapatel89100/Filecraft/blob/main/assets/demo-video.mp4
 ## Distribution
 
 - Package target: PyPI (`filecraft-cli`)
+- AUR: [`filecraft-cli`](https://aur.archlinux.org/packages/filecraft-cli)
 - CLI command: `filecraft`
 - Standalone binary: `Filecraft` (PyInstaller)
 
@@ -157,6 +158,7 @@ Merges files from multiple `working_dir` locations into a single `target_dir`.
 
 - `--mode [extension|date|extension_and_date|file]` (default: `extension`)
 - `--extension TEXT` (required for `extension` and `extension_and_date`)
+- `--file-type TEXT` (optional for `file`; accepts category like `documents` or extension like `pdf`)
 - `--date YYYY-MM-DD` (used by `date` and `extension_and_date`; validated)
 - `--working-dir PATH` (required, repeat for multiple source directories)
 - `--target-dir PATH` (default: current directory)
@@ -173,6 +175,8 @@ filecraft merge --mode extension --extension pdf --working-dir ./downloads --wor
 filecraft merge --mode date --date 2026-03-01 --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
 filecraft merge --mode extension_and_date --extension .jpg --date 2026-03-01 --working-dir ./camera --working-dir ./phone --target-dir ./merged
 filecraft merge --mode file --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
+filecraft merge --mode file --file-type documents --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
+filecraft merge --mode file --file-type pdf --working-dir ./in1 --working-dir ./in2 --target-dir ./merged
 ```
 
 ## Notes

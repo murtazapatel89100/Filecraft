@@ -445,6 +445,67 @@ class TestOrganizerEdgeCases(unittest.TestCase):
         # Empty string treated as no prefix -> just "1.txt"
         self.assertTrue((self.out / "1.txt").exists())
 
+    def test_merge_file_type_no_filter_sorts_all(self) -> None:
+        """Merge by file type with no filter should sort all files."""
+        work2 = self.base / "work2"
+        work2.mkdir()
+        (self.work / "song.mp3").write_text("audio", encoding="utf-8")
+        (work2 / "photo.jpg").write_text("img", encoding="utf-8")
+        (work2 / "data.xyz").write_text("unknown", encoding="utf-8")
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, work2],
+            separate_choice=SeparateChoices.FILE,
+        )
+        organizer.merge()
+        self.assertTrue((self.out / "AUDIO" / "song.mp3").exists())
+        self.assertTrue((self.out / "IMAGES" / "photo.jpg").exists())
+        self.assertTrue((self.out / "OTHERS" / "data.xyz").exists())
+
+    def test_merge_file_type_category_filter_only_matching(self) -> None:
+        """Merge with category filter should only merge matching type."""
+        work2 = self.base / "work2"
+        work2.mkdir()
+        (self.work / "report.pdf").write_text("doc", encoding="utf-8")
+        (work2 / "song.mp3").write_text("audio", encoding="utf-8")
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, work2],
+            separate_choice=SeparateChoices.FILE,
+            file_type="documents",
+        )
+        organizer.merge()
+        self.assertTrue((self.out / "DOCUMENTS" / "report.pdf").exists())
+        self.assertTrue((work2 / "song.mp3").exists())
+
+    def test_merge_file_type_extension_filter_only_matching(self) -> None:
+        """Merge with extension filter should only merge that extension."""
+        work2 = self.base / "work2"
+        work2.mkdir()
+        (self.work / "invoice.pdf").write_text("doc", encoding="utf-8")
+        (work2 / "readme.txt").write_text("txt", encoding="utf-8")
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, work2],
+            separate_choice=SeparateChoices.FILE,
+            file_type="pdf",
+        )
+        organizer.merge()
+        self.assertTrue((self.out / "DOCUMENTS" / "invoice.pdf").exists())
+        self.assertTrue((work2 / "readme.txt").exists())
+
+    def test_merge_file_type_invalid_filter(self) -> None:
+        """Merge with invalid file type filter should print error and not move files."""
+        (self.work / "paper.pdf").write_text("doc", encoding="utf-8")
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work],
+            separate_choice=SeparateChoices.FILE,
+            file_type="not-a-real-type",
+        )
+        organizer.merge()
+        self.assertTrue((self.work / "paper.pdf").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

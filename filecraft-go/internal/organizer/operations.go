@@ -503,6 +503,22 @@ func (f *FileOrganizer) mergeByExtensionAndDate(out io.Writer) error {
 }
 
 func (f *FileOrganizer) mergeByFileType(out io.Writer) error {
+	filterKind, filterValue, isValid := normalizeFileTypeFilter(f.fileType)
+	if !isValid {
+		fmt.Fprintf(out, "Unsupported file type filter '%s'.\n", f.fileType)
+		return nil
+	}
+
+	label := "by file type"
+	if filterKind != "" {
+		label = fmt.Sprintf("with filter %s", f.fileType)
+	}
+
+	noMatch := "No files found in provided working directories."
+	if f.fileType != "" {
+		noMatch = fmt.Sprintf("No files found for file type '%s' in provided working directories.", f.fileType)
+	}
+
 	return organizeFiles(organizeConfig{
 		workingDirs: f.workingDirs,
 		targetDir:   f.targetDir,
@@ -511,9 +527,22 @@ func (f *FileOrganizer) mergeByFileType(out io.Writer) error {
 		saveHistory: f.saveHistory,
 		historyPath: f.historyPath,
 		operation:   "merge_by_file_type",
-		headerMsg:   fmt.Sprintf("Merging all files by file type from %d directories → %s", len(f.workingDirs), f.targetDir),
-		noMatchMsg:  "No files found in provided working directories.",
-		fileFilter:  func(_ string) bool { return true },
+		headerMsg:   fmt.Sprintf("Merging files %s from %d directories → %s", label, len(f.workingDirs), f.targetDir),
+		noMatchMsg:  noMatch,
+		fileFilter: func(file string) bool {
+			if filterKind == "" {
+				return true
+			}
+			ext := getExtension(file, knownExtensions)
+			folder := extensionTypeMap[ext]
+			if folder == "" {
+				folder = "OTHERS"
+			}
+			if filterKind == "category" {
+				return folder == filterValue
+			}
+			return ext == filterValue
+		},
 		destForFile: func(file string) string {
 			ext := getExtension(file, knownExtensions)
 			folder := extensionTypeMap[ext]

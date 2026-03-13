@@ -22,6 +22,7 @@ Each implementation has its own README with install, usage examples, and command
 
 - `filecraft-cli` (Python): published on PyPI.
 - `Filecraft` (Go binary): published on GitHub Releases.
+- AUR: [`filecraft-cli`](https://aur.archlinux.org/packages/filecraft-cli) (Python) and [`filecraft-cli-bin`](https://aur.archlinux.org/packages/filecraft-cli-bin) (Go binary).
 - Homebrew support is planned for `Filecraft`.
 
 ## Quick Start
@@ -51,6 +52,7 @@ Python:
 poetry run filecraft rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
 poetry run filecraft separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
 poetry run filecraft merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
+poetry run filecraft merge --mode file --file-type documents --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
 poetry run filecraft revert --directory ./out
 ```
 
@@ -60,6 +62,7 @@ Go:
 ./Filecraft rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
 ./Filecraft separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
 ./Filecraft merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
+./Filecraft merge --mode file --file-type documents --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
 ./Filecraft revert --directory ./out
 ```
 
@@ -99,6 +102,7 @@ To provide the same CLI behavior across two ecosystems while comparing developer
 
 - `filecraft-cli` package: PyPI
 - `Filecraft` binary: GitHub Releases
+- AUR: `filecraft-cli` (Python) and `filecraft-cli-bin` (Go binary)
 - Homebrew: planned for `Filecraft`
 
 ### Which version value is canonical for releases?

@@ -318,6 +318,111 @@ func TestMergeFileTypeFromMultipleWorkingDirs(t *testing.T) {
 	}
 }
 
+func TestMergeFileTypeWithCategoryFilter(t *testing.T) {
+	base := t.TempDir()
+	work1 := filepath.Join(base, "work1")
+	work2 := filepath.Join(base, "work2")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work1, "paper.pdf"), "doc")
+	mustWriteFile(t, filepath.Join(work2, "song.mp3"), "audio")
+	mustWriteFile(t, filepath.Join(work2, "notes.docx"), "doc2")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:   out,
+		WorkingDirs: []string{work1, work2},
+		Mode:        ModeFile,
+		FileType:    "documents",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Merge(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "paper.pdf")); err != nil {
+		t.Fatalf("expected paper.pdf merged to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "notes.docx")); err != nil {
+		t.Fatalf("expected notes.docx merged to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(work2, "song.mp3")); err != nil {
+		t.Fatalf("expected song.mp3 to remain in work dir: %v", err)
+	}
+}
+
+func TestMergeFileTypeWithExtensionFilter(t *testing.T) {
+	base := t.TempDir()
+	work1 := filepath.Join(base, "work1")
+	work2 := filepath.Join(base, "work2")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work1, "invoice.pdf"), "doc")
+	mustWriteFile(t, filepath.Join(work2, "notes.txt"), "txt")
+	mustWriteFile(t, filepath.Join(work2, "report.pdf"), "doc2")
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:   out,
+		WorkingDirs: []string{work1, work2},
+		Mode:        ModeFile,
+		FileType:    "pdf",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Merge(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "invoice.pdf")); err != nil {
+		t.Fatalf("expected invoice.pdf merged to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "DOCUMENTS", "report.pdf")); err != nil {
+		t.Fatalf("expected report.pdf merged to DOCUMENTS: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(work2, "notes.txt")); err != nil {
+		t.Fatalf("expected notes.txt to remain in work dir: %v", err)
+	}
+}
+
+func TestMergeFileTypeWithInvalidFilter(t *testing.T) {
+	base := t.TempDir()
+	work := filepath.Join(base, "work")
+	out := filepath.Join(base, "out")
+
+	mustWriteFile(t, filepath.Join(work, "paper.pdf"), "doc")
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	fo, err := NewFileOrganizer(Config{
+		TargetDir:   out,
+		WorkingDirs: []string{work},
+		Mode:        ModeFile,
+		FileType:    "not-a-type",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf bytes.Buffer
+	if err := fo.Merge(&outBuf); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(work, "paper.pdf")); err != nil {
+		t.Fatalf("expected paper.pdf to remain in work dir: %v", err)
+	}
+	if !strings.Contains(outBuf.String(), "Unsupported file type filter") {
+		t.Fatalf("expected unsupported file type message, got: %s", outBuf.String())
+	}
+}
+
 func TestSeparateExtensionRecursiveFindsNestedFiles(t *testing.T) {
 	base := t.TempDir()
 	work := filepath.Join(base, "work")

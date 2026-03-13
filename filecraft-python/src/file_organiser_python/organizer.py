@@ -231,6 +231,7 @@ class FileOrganizer:
                     target_dir=self.target_dir,
                     working_dirs=self.working_dirs,
                     recursive=self.recursive,
+                    file_type=self.file_type,
                     history=self.save_history,
                     history_path=self.history_path,
                     dry_run=self.dry_run,

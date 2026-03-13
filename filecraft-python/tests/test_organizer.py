@@ -311,6 +311,87 @@ class TestOrganizerFixes(unittest.TestCase):
         self.assertTrue((self.out / "AUDIO" / "song.mp3").exists())
         self.assertTrue((self.out / "DOCUMENTS" / "paper.pdf").exists())
 
+    def test_merge_file_type_with_category_filter(self) -> None:
+        (self.work / "paper.pdf").write_text("doc", encoding="utf-8")
+        (self.work2 / "song.mp3").write_text("audio", encoding="utf-8")
+        (self.work2 / "notes.docx").write_text("doc2", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.FILE,
+            file_type="documents",
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / "DOCUMENTS" / "paper.pdf").exists())
+        self.assertTrue((self.out / "DOCUMENTS" / "notes.docx").exists())
+        self.assertTrue((self.work2 / "song.mp3").exists())
+
+    def test_merge_file_type_with_extension_filter(self) -> None:
+        (self.work / "invoice.pdf").write_text("doc", encoding="utf-8")
+        (self.work2 / "notes.txt").write_text("txt", encoding="utf-8")
+        (self.work2 / "report.pdf").write_text("doc2", encoding="utf-8")
+
+        organizer = FileOrganizer(
+            target_dir=self.out,
+            working_dirs=[self.work, self.work2],
+            separate_choice=SeparateChoices.FILE,
+            file_type="pdf",
+        )
+        organizer.merge()
+
+        self.assertTrue((self.out / "DOCUMENTS" / "invoice.pdf").exists())
+        self.assertTrue((self.out / "DOCUMENTS" / "report.pdf").exists())
+        self.assertTrue((self.work2 / "notes.txt").exists())
+
+    def test_merge_file_type_with_invalid_filter(self) -> None:
+        (self.work / "paper.pdf").write_text("doc", encoding="utf-8")
+
+        result = self.runner.invoke(
+            app,
+            [
+                "merge",
+                "--mode",
+                "file",
+                "--file-type",
+                "not-a-type",
+                "--working-dir",
+                str(self.work),
+                "--target-dir",
+                str(self.out),
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Unsupported file type filter", result.output)
+        self.assertTrue((self.work / "paper.pdf").exists())
+
+    def test_merge_file_type_cli_with_category_filter(self) -> None:
+        (self.work / "photo.jpg").write_text("img", encoding="utf-8")
+        (self.work2 / "song.mp3").write_text("audio", encoding="utf-8")
+
+        result = self.runner.invoke(
+            app,
+            [
+                "merge",
+                "--mode",
+                "file",
+                "--file-type",
+                "images",
+                "--working-dir",
+                str(self.work),
+                "--working-dir",
+                str(self.work2),
+                "--target-dir",
+                str(self.out),
+            ],
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue((self.out / "IMAGES" / "photo.jpg").exists())
+        self.assertTrue((self.work2 / "song.mp3").exists())
+
     def test_separate_file_mode_with_file_type_category_filter(self) -> None:
         (self.work / "paper.pdf").write_text("doc", encoding="utf-8")
         (self.work / "song.mp3").write_text("audio", encoding="utf-8")
