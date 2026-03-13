@@ -22,14 +22,18 @@ func newRevertCmd() *cobra.Command {
 				return err
 			}
 
-			reverted, err := organizer.RevertHistory(
-				historyFile,
-				directory,
-				dryRun,
-				!keepHistory,
-				cmd.OutOrStdout(),
-			)
-			if err != nil {
+			var reverted int
+			if err := runWithSpinner("Reverting files", cmd.ErrOrStderr(), func() error {
+				count, err := organizer.RevertHistory(
+					historyFile,
+					directory,
+					dryRun,
+					!keepHistory,
+					cmd.OutOrStdout(),
+				)
+				reverted = count
+				return err
+			}); err != nil {
 				return err
 			}
 
