@@ -1,11 +1,18 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- Update roadmap
+- Update banner
+## [1.1.0] - 2026-03-08
+
 ### 🚀 Features
 
 - Add recursive file discovery to rename, separate, and merge com… (#10)
 
 ### ⚙️ Miscellaneous Tasks
 
+- Release v1.1.0
 - Release v1.1.0
 ## [1.0.3] - 2026-03-04
 

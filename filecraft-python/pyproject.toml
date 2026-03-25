@@ -1,6 +1,6 @@
 [project]
 name = "filecraft-cli"
-version = "1.1.0"
+version = "1.1.1"
 description = "A CLI organizer you didn’t know you needed — yet."
 authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
 readme = "README.md"
