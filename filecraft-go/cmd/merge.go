@@ -49,7 +49,9 @@ func newMergeCmd() *cobra.Command {
 				return err
 			}
 
-			return fo.Merge(cmd.OutOrStdout())
+			return runWithSpinner("Merging files", cmd.ErrOrStderr(), func() error {
+				return fo.Merge(cmd.OutOrStdout())
+			})
 		},
 	}
 

@@ -66,6 +66,7 @@ PYTHONPATH=src python -m file_organiser_python.main --help
 
 All commands support `--dry-run` to preview actions without moving files.
 Working directory flags are validated before any `--target-dir` creation prompt.
+When running in an interactive terminal, Filecraft shows a spinner for long-running operations (`rename`, `separate`, `merge`, `revert`).
 
 ## `rename`
 

@@ -11,6 +11,7 @@ from file_organiser_python.organizer import (
     MissingTargetDirectoryError,
     TargetPathNotDirectoryError,
 )
+from file_organiser_python.spinner import cli_spinner
 from file_organiser_python.utils import validate_directory
 
 app = typer.Typer()
@@ -127,7 +128,8 @@ def rename(
         )
     except (MissingTargetDirectoryError, TargetPathNotDirectoryError) as exc:
         raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
-    organizer.rename()
+    with cli_spinner("Renaming files"):
+        organizer.rename()
 
 
 @app.command()
@@ -186,7 +188,8 @@ def separate(
         )
     except (MissingTargetDirectoryError, TargetPathNotDirectoryError) as exc:
         raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
-    organizer.separate()
+    with cli_spinner("Separating files"):
+        organizer.separate()
 
 
 @app.command()
@@ -211,12 +214,13 @@ def revert(
 ) -> None:
     _validate_optional_directory(directory, "--directory")
 
-    reverted = revert_history(
-        history_path=history_file,
-        directory=directory,
-        dry_run=dry_run,
-        delete_after_revert=not keep_history,
-    )
+    with cli_spinner("Reverting files"):
+        reverted = revert_history(
+            history_path=history_file,
+            directory=directory,
+            dry_run=dry_run,
+            delete_after_revert=not keep_history,
+        )
     print(f"Reverted {reverted} file(s).")
 
 
@@ -270,7 +274,8 @@ def merge(
         )
     except (MissingTargetDirectoryError, TargetPathNotDirectoryError) as exc:
         raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
-    organizer.merge()
+    with cli_spinner("Merging files"):
+        organizer.merge()
 
 
 if __name__ == "__main__":

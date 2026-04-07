@@ -51,7 +51,9 @@ func newSeparateCmd() *cobra.Command {
 				return err
 			}
 
-			return fo.Separate(cmd.OutOrStdout())
+			return runWithSpinner("Separating files", cmd.ErrOrStderr(), func() error {
+				return fo.Separate(cmd.OutOrStdout())
+			})
 		},
 	}
 
