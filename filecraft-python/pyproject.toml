@@ -14,7 +14,7 @@ keywords = [
     "automation",
     "developer-tools",
 ]
-dependencies = ["typer (>=0.24.1,<0.25.0)"]
+dependencies = ["typer (>=0.24.2,<0.25.0)"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
