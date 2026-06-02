@@ -1,9 +1,19 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- Bump version to 2.0.0, deprecate go implementation, add rich UI
+
+### 📚 Documentation
+
+- Update readme and bump version to 2.1.0
+## [1.1.1] - 2026-03-25
+
 ### ⚙️ Miscellaneous Tasks
 
 - Update roadmap
 - Update banner
+- Release v1.1.1
 ## [1.1.0] - 2026-03-08
 
 ### 🚀 Features
