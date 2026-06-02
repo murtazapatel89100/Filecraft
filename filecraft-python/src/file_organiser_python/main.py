@@ -13,7 +13,10 @@ from file_organiser_python.organizer import (
 )
 from file_organiser_python.utils import validate_directory
 
+from rich.console import Console
+
 app = typer.Typer()
+console = Console()
 
 
 def _resolve_target_directory(
@@ -32,7 +35,9 @@ def _resolve_target_directory(
         return target_dir
 
     if dry_run:
-        typer.echo(f"[DRY RUN] Target directory does not exist: {target_dir}")
+        console.print(
+            f"[dim][DRY RUN] Target directory does not exist: {target_dir}[/dim]"
+        )
         return target_dir
 
     if typer.confirm(
@@ -46,7 +51,9 @@ def _resolve_target_directory(
                 f"Unable to create target directory: {target_dir}",
                 param_hint="--target-dir",
             ) from exc
-        typer.echo(f"Created target directory: {target_dir.resolve()}")
+        console.print(
+            f"[green]Created target directory: {target_dir.resolve()}[/green]"
+        )
         return target_dir
 
     raise typer.BadParameter(
@@ -217,7 +224,7 @@ def revert(
         dry_run=dry_run,
         delete_after_revert=not keep_history,
     )
-    print(f"Reverted {reverted} file(s).")
+    console.print(f"[green]Reverted {reverted} file(s).[/green]")
 
 
 @app.command()

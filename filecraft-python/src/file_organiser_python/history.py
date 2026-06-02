@@ -4,6 +4,18 @@ from typing import Dict, Optional
 
 from file_organiser_python.utils import build_non_conflicting_path
 
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeRemainingColumn,
+)
+
+console = Console()
+
 
 def save_history(
     history_path: Path,
@@ -65,36 +77,50 @@ def revert_history(
 
         history_path = load_latest_history(directory)
         if history_path is None:
-            print(f"No history file found in {directory}")
+            console.print(f"[yellow]No history file found in {directory}[/yellow]")
             return 0
 
     try:
         mappings = read_history(history_path)
     except ValueError as exc:
-        print(str(exc))
+        console.print(f"[red]{exc}[/red]")
         return 0
 
     if not mappings:
-        print(f"No mappings found in history file: {history_path}")
+        console.print(
+            f"[yellow]No mappings found in history file: {history_path}[/yellow]"
+        )
         return 0
 
     reverted_count = 0
-    for current, original in mappings.items():
-        current_path = Path(current)
-        original_path = Path(original)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("[cyan]Reverting files...", total=len(mappings))
+        for current, original in mappings.items():
+            progress.advance(task)
+            current_path = Path(current)
+            original_path = Path(original)
 
-        if not current_path.exists():
-            continue
+            if not current_path.exists():
+                continue
 
-        if dry_run:
-            print(f"[DRY RUN] Would move {current_path} -> {original_path}")
+            if dry_run:
+                console.print(
+                    f"[dim][DRY RUN] Would move[/dim] {current_path.name} -> {original_path.name}"
+                )
+                reverted_count += 1
+                continue
+
+            original_path.parent.mkdir(parents=True, exist_ok=True)
+            destination_path = build_non_conflicting_path(original_path)
+            current_path.rename(destination_path)
             reverted_count += 1
-            continue
-
-        original_path.parent.mkdir(parents=True, exist_ok=True)
-        destination_path = build_non_conflicting_path(original_path)
-        current_path.rename(destination_path)
-        reverted_count += 1
 
     if reverted_count and delete_after_revert and not dry_run:
         delete_history(history_path)

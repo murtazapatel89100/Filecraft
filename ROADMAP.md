@@ -108,7 +108,7 @@
 
 ## Integration
 
-- Homebrew installation (planned for `Filecraft`)
+- Homebrew installation
 - Scoop installation
 - AUR package
 - Docker image
@@ -117,8 +117,7 @@
 ## Distribution Channels
 
 - Publish `filecraft-cli` to PyPI
-- Publish `Filecraft` binaries via GitHub Releases
-- Homebrew tap for `Filecraft` (future)
+- Homebrew tap (future)
 
 ## Developer Features
 

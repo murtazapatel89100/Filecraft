@@ -1,6 +1,6 @@
 [project]
 name = "filecraft-cli"
-version = "1.1.1"
+version = "2.0.0"
 description = "A CLI organizer you didn’t know you needed — yet."
 authors = [{ name = "MURTAZA PATEL", email = "murtazapatel89100@gmail.com" }]
 readme = "README.md"
@@ -14,7 +14,7 @@ keywords = [
     "automation",
     "developer-tools",
 ]
-dependencies = ["typer (>=0.24.2,<0.25.0)"]
+dependencies = ["typer (>=0.24.2,<0.25.0)", "rich (>=15.0.0,<16.0.0)"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

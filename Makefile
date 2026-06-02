@@ -1,18 +1,15 @@
 SHELL := /bin/bash
 
-.PHONY: help ci python-install python-lint python-test python-build go-lint go-test go-build hooks
+.PHONY: help ci python-install python-lint python-test python-build hooks
 
 help:
 	@echo "Available targets:"
-	@echo "  make ci            - Run Python + Go lint/test/build checks"
+	@echo "  make ci            - Run Python lint/test/build checks"
 	@echo "  make hooks         - Install git pre-commit and pre-push hooks"
 	@echo "  make python-install"
 	@echo "  make python-lint"
 	@echo "  make python-test"
 	@echo "  make python-build"
-	@echo "  make go-lint"
-	@echo "  make go-test"
-	@echo "  make go-build"
 
 hooks:
 	git config core.hooksPath .githooks
@@ -33,7 +30,7 @@ release:
 	git push origin main
 	git push origin v$(VERSION)
 
-ci: python-lint python-test python-build go-lint go-test go-build
+ci: python-lint python-test python-build
 
 python-install:
 	cd filecraft-python && poetry install --with dev --sync
@@ -48,13 +45,4 @@ python-build:
 	cd filecraft-python && poetry build
 	cd filecraft-python && poetry run pyinstaller --onefile --name Filecraft --paths src src/file_organiser_python/main.py
 
-go-lint:
-	@cd filecraft-go && UNFORMATTED=$$(gofmt -l .); if [ -n "$$UNFORMATTED" ]; then echo "Unformatted Go files:"; echo "$$UNFORMATTED"; exit 1; fi
-	cd filecraft-go && go vet ./...
 
-go-test:
-	cd filecraft-go && go test ./...
-
-go-build:
-	mkdir -p filecraft-go/dist
-	cd filecraft-go && go build -o dist/Filecraft .

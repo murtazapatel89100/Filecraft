@@ -15,17 +15,6 @@ else
 fi
 cd ..
 
-echo "==> [pre-push] Running Go tests..."
-cd filecraft-go
-if ! command -v go &>/dev/null; then
-    echo "ERROR: Go is not installed. Go tests cannot run."
-    echo "Please install Go and run:"
-    echo "  go test ./..."
-    echo "Then push again."
-    exit 1
-fi
 
-go test ./...
-cd ..
 
 echo "==> [pre-push] All tests passed."

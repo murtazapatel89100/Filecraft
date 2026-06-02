@@ -2,17 +2,13 @@
 
 Thanks for helping improve `Filecraft`.
 
-This repository contains two implementations of the same CLI behavior:
-
-- `Filecraft-python` (`filecraft-python`, Typer)
-- `Filecraft-go` (`filecraft-go`, Cobra)
+This repository contains the Python implementation (`filecraft-python`, Typer) of the Filecraft CLI.
 
 ## Ground Rules
 
-- Keep command behavior compatible across both implementations.
 - Keep changes focused and small.
 - Add or update tests for behavior changes.
-- Do not add ad-hoc CI dependency installs outside the package managers already used (`poetry`, `go mod`).
+- Do not add ad-hoc CI dependency installs outside the package managers already used (`poetry`).
 
 ## Development Setup
 
@@ -26,23 +22,11 @@ poetry run python -m unittest discover -s tests -p "test_*.py"
 poetry build
 ```
 
-### Go
 
-```bash
-cd filecraft-go
-gofmt -w .
-go vet ./...
-go test ./...
-go build -o dist/Filecraft .
-```
 
 ## Pull Request Expectations
 
 - Include a clear description of the problem and fix.
-- Mention whether behavior changed in Python, Go, or both.
-- If behavior changes in one implementation, either:
-  - implement parity in the other implementation, or
-  - explain why parity is intentionally deferred.
 - Ensure CI passes before requesting review.
 
 ## Versioning and Releases

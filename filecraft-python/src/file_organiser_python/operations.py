@@ -15,14 +15,22 @@ from pathlib import Path
 from typing import Callable, Optional
 
 
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeRemainingColumn,
+)
+
+console = Console()
+
+
 def _safe_print(message: str) -> None:
-    """Print *message*, replacing unencodable characters on narrow-codec terminals (e.g. cp1252 on Windows)."""
-    try:
-        print(message)
-    except UnicodeEncodeError:
-        encoding = getattr(sys.stdout, "encoding", "utf-8") or "utf-8"
-        safe = message.encode(encoding, errors="backslashreplace").decode(encoding)
-        print(safe)
+    """Print *message* using Rich Console."""
+    console.print(message)
 
 
 from file_organiser_python.constants import (
@@ -168,10 +176,10 @@ def _move_file(
     new_path = build_non_conflicting_path(destination_path)
 
     if dry_run:
-        _safe_print(f"[DRY RUN] Would move {file_path} -> {new_path}...")
+        console.print(
+            f"[dim][DRY RUN] Would move[/dim] {file_path.name} -> {new_path.name}"
+        )
         return new_path
-
-    _safe_print(f"Moving {file_path} -> {new_path}...")
 
     try:
         file_path.rename(new_path)
@@ -289,18 +297,19 @@ def _organize_files(
     history_path: Optional[Path] = None,
 ) -> None:
     """Discover -> filter -> create dirs -> preflight -> move -> save history."""
-    _safe_print(header_message)
+    _safe_print(f"[bold blue]{header_message}[/bold blue]")
 
-    files = [
-        f
-        for f in _files_from_working_dirs(
-            working_dirs, recursive=recursive, excluded_dirs=[target_dir]
-        )
-        if f.is_file() and file_filter(f)
-    ]
+    with console.status("[bold green]Discovering files...", spinner="dots"):
+        files = [
+            f
+            for f in _files_from_working_dirs(
+                working_dirs, recursive=recursive, excluded_dirs=[target_dir]
+            )
+            if f.is_file() and file_filter(f)
+        ]
 
     if not files:
-        _safe_print(no_match_message)
+        _safe_print(f"[yellow]{no_match_message}[/yellow]")
         return
 
     # Ensure every unique destination directory exists.
@@ -315,20 +324,33 @@ def _organize_files(
         _preflight_cross_device_space(files, dest_for_file)
 
     revert_map: dict[str, str] = {}
-    for f in files:
-        original = f.resolve()
-        moved = _move_file(f, dest_for_file(f), dry_run)
-        if not moved or dry_run:
-            continue
-        revert_map[str(moved.resolve())] = str(original)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("[cyan]Organizing files...", total=len(files))
+        for f in files:
+            original = f.resolve()
+            moved = _move_file(f, dest_for_file(f), dry_run)
+            progress.advance(task)
+            if not moved or dry_run:
+                continue
+            revert_map[str(moved.resolve())] = str(original)
 
     if history and not dry_run and revert_map:
         if not history_path:
-            _safe_print("Failed to validate History path, cannot save history.")
+            _safe_print(
+                "[red]Failed to validate History path, cannot save history.[/red]"
+            )
             return
         save_history(
             history_path=history_path, revert_map=revert_map, operation=operation
         )
+        _safe_print(f"[green]History saved to {history_path.name}[/green]")
 
 
 # ---------------------------------------------------------------------------

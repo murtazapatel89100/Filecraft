@@ -148,49 +148,6 @@ jobs:
           name: filecraft-python-package-release
           path: filecraft-python/dist/*
 
-  go-release:
-    name: Filecraft Go implementation release (${{ matrix.label }})
-    runs-on: ${{ matrix.runs_on }}
-    needs: prepare
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runs_on: ubuntu-latest
-            label: linux-amd64
-            ext: ""
-          - runs_on: macos-latest
-            label: macos-amd64
-            ext: ""
-          - runs_on: windows-latest
-            label: windows-amd64
-            ext: ".exe"
-    defaults:
-      run:
-        working-directory: filecraft-go
-        shell: bash
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: filecraft-go/go.mod
-
-      - name: Build Go binary
-        run: |
-          mkdir -p dist
-          output="dist/Filecraft-${{ needs.prepare.outputs.version }}-${{ matrix.label }}${{ matrix.ext }}"
-          go build -o "$output" .
-
-      - name: Upload Filecraft Go release artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: filecraft-go-impl-release-${{ matrix.label }}
-          path: filecraft-go/dist/*
-
   publish-pypi:
     name: Publish filecraft to PyPI
     runs-on: ubuntu-latest
@@ -217,7 +174,6 @@ jobs:
       - prepare
       - python-release
       - python-package-release
-      - go-release
 
     steps:
       - name: Download all artifacts

@@ -1,9 +1,8 @@
 # Releases Guide
 
-This repository has two CLI implementations under the Filecraft app:
+This repository has the Python CLI implementation under the Filecraft app:
 
 - Python implementation (Typer, PyPI distribution as `filecraft-cli`)
-- Go implementation (Cobra, GitHub Releases binary as `Filecraft`)
 
 Releases are automated with GitHub Actions and are triggered by either:
 
@@ -33,10 +32,6 @@ For each valid version:
 - Builds `Filecraft` Python CLI executable using `PyInstaller`
 - Builds Python package artifacts (`sdist` + `wheel`) once for PyPI and GitHub Release assets
 - Publishes to PyPI via Trusted Publishing (OIDC)
-- Builds `Filecraft` Go binaries for:
-  - Linux amd64
-  - macOS amd64
-  - Windows amd64 (`.exe`)
 - Uploads artifacts
 - Publishes a GitHub Release
 - Auto-generates release notes (`generate_release_notes: true`)
@@ -75,13 +70,6 @@ cd filecraft-python
 poetry install --with dev
 poetry run black --check src tests
 poetry run python -m unittest discover -s tests -p "test_*.py"
-cd ..
-
-# Go
-cd filecraft-go
-gofmt -w .
-go vet ./...
-go test ./...
 cd ..
 ```
 
@@ -124,10 +112,9 @@ For `filecraft-cli`, add a PyPI Trusted Publisher that matches:
 - Never edit workflow artifact names in one job without updating downstream download/publish steps.
 - Keep release artifacts deterministic:
   - Python binary includes version and platform
-  - Go binaries include version and target platform
 - If release fails at validation, fix versions and push a new correct tag.
 
 ## CI vs Release
 
-- `ci.yml` runs on push/PR to `main`: lint, tests, build for both Python and Go.
+- `ci.yml` runs on push/PR to `main`: lint, tests, build for Python.
 - `release.yml` runs on valid version tag push or manual workflow dispatch: builds release artifacts and publishes GitHub Release.

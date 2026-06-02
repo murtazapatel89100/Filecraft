@@ -1,6 +1,6 @@
 # Architecture
 
-`Filecraft` contains two CLI fronts with aligned behavior and separate language-specific internals.
+`Filecraft` is implemented in Python and provides a CLI for file organization.
 
 ## Diagram
 
@@ -13,12 +13,6 @@ flowchart TB
       PYHIST[history.py]
     end
 
-    subgraph Go[Filecraft-go]
-      GOCLI[Cobra Commands]
-      GOCORE[internal/organizer]
-      GOHIST[history.go]
-    end
-
     SHARED["Behavior parity contract<br/>rename / separate / merge / revert"]
     FS[(Filesystem)]
     HIST[(History JSON files)]
@@ -26,23 +20,17 @@ flowchart TB
 
   PYCLI --> PYCORE
   PYCORE --> PYHIST
-  GOCLI --> GOCORE
-  GOCORE --> GOHIST
 
   PYCORE --> SHARED
-  GOCORE --> SHARED
 
   PYCORE --> FS
-  GOCORE --> FS
   PYHIST --> HIST
-  GOHIST --> HIST
 ```
 
 ## Key Points
 
-- Python and Go CLIs should expose compatible flags and outcomes.
-- All separate/merge operations in both languages funnel through a single `_organize_files` (Python) / `organizeFiles` (Go) loop that owns the discover → filter → move → history pattern.
+- All separate/merge operations funnel through a single `_organize_files` loop that owns the discover → filter → move → history pattern.
 - History files are the safety mechanism for `revert`.
-- CI validates lint/test/build for both implementations on Linux, macOS, and Windows.
+- CI validates lint/test/build for the implementation on Linux, macOS, and Windows.
 - Git hooks (`.githooks/`) enforce lint on commit and tests on push. Run `make hooks` to activate.
-- Release automation builds versioned binaries for both implementations and publishes GitHub Releases.
+- Release automation builds versioned binaries and publishes GitHub Releases.

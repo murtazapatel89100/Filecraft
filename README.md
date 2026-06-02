@@ -7,7 +7,6 @@ Filecraft is a cross-language CLI suite for automating file management tasks suc
 ## Implementations
 
 - [filecraft-python](filecraft-python): Python implementation (PyPI target).
-- [filecraft-go](filecraft-go): Go implementation (GitHub Releases target).
 
 Both implementations support:
 
@@ -21,8 +20,6 @@ Each implementation has its own README with install, usage examples, and command
 ## Distribution
 
 - `filecraft-cli` (Python): published on PyPI.
-- `Filecraft` (Go binary): published on GitHub Releases.
-- Homebrew support is planned for `Filecraft`.
 
 ## Quick Start
 
@@ -32,15 +29,6 @@ Each implementation has its own README with install, usage examples, and command
 cd filecraft-python
 poetry install --with dev --sync
 poetry run filecraft --help
-```
-
-### Go CLI
-
-```bash
-cd filecraft-go
-go run . --help
-go build -o Filecraft .
-./Filecraft --help
 ```
 
 ## Example Commands
@@ -54,15 +42,6 @@ poetry run filecraft merge --mode file --working-dir ./downloads --working-dir .
 poetry run filecraft revert --directory ./out
 ```
 
-Go:
-
-```bash
-./Filecraft rename --working-dir ./downloads --target-dir ./renamed --rename-with invoice
-./Filecraft separate --mode extension --extension pdf --working-dir ./in --target-dir ./out --history
-./Filecraft merge --mode file --working-dir ./downloads --working-dir ./desktop --target-dir ./merged
-./Filecraft revert --directory ./out
-```
-
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed architecture diagram.
@@ -70,11 +49,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed architecture d
 ```mermaid
 flowchart LR
   CLI_PY["Filecraft (Python / Typer)"] --> CORE["Organizer logic"]
-  CLI_GO["Filecraft (Go / Cobra)"] --> CORE
   CORE --> FS["Filesystem operations"]
   CORE --> HIST["History files (.organizer_history_*.json)"]
   CI["CI workflow"] --> CLI_PY
-  CI --> CLI_GO
   REL["Release workflow"] --> BIN["Versioned Filecraft artifacts"]
 ```
 
@@ -89,22 +66,10 @@ flowchart LR
 - Maintenance and quality: `CHANGELOG.md`, `ROADMAP.md`, `Makefile`, `.github/dependabot.yml`, `.pre-commit-config.yaml`
 - Full checklist status: [OPEN_SOURCE_CHECKLIST.md](OPEN_SOURCE_CHECKLIST.md)
 
-## FAQ
-
-### Why keep both Python and Go implementations?
-
-To provide the same CLI behavior across two ecosystems while comparing developer and runtime tradeoffs.
-
 ### Where are releases published?
 
 - `filecraft-cli` package: PyPI
-- `Filecraft` binary: GitHub Releases
-- Homebrew: planned for `Filecraft`
 
 ### Which version value is canonical for releases?
 
 The release version must match across git tag (without `v`), `VERSION`, and `filecraft-python/pyproject.toml`.
-
-### Where should command behavior changes be implemented?
-
-In both implementations unless explicitly scoped otherwise.

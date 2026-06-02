@@ -15,17 +15,6 @@ else
 fi
 cd ..
 
-echo "==> [pre-commit] Running Go lint (gofmt + go vet)..."
-cd filecraft-go
-UNFORMATTED=$(gofmt -l .)
-if [ -n "$UNFORMATTED" ]; then
-    echo "ERROR: The following Go files are not formatted:"
-    echo "$UNFORMATTED"
-    echo "Run 'gofmt -w .' to fix them before committing."
-    exit 1
-fi
 
-go vet ./...
-cd ..
 
 echo "==> [pre-commit] All lint checks passed."

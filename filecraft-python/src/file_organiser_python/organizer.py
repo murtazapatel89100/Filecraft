@@ -19,6 +19,18 @@ from file_organiser_python.operations import (
 )
 from file_organiser_python.utils import build_non_conflicting_path
 
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeRemainingColumn,
+)
+
+console = Console()
+
 
 class MissingTargetDirectoryError(FileNotFoundError):
     def __init__(self, path: Path) -> None:
@@ -87,51 +99,64 @@ class FileOrganizer:
             else []
         )
 
-        files = _files_from_working_dirs(
-            [self.working_dir],
-            recursive=self.recursive,
-            excluded_dirs=excluded_dirs,
-        )
+        with console.status("[bold green]Discovering files...", spinner="dots"):
+            files = _files_from_working_dirs(
+                [self.working_dir],
+                recursive=self.recursive,
+                excluded_dirs=excluded_dirs,
+            )
 
         if not files:
-            print("No files found in the working directory.")
+            console.print("[yellow]No files found in the working directory.[/yellow]")
             return
 
         rename_map: dict[str, str] = {}
 
-        for index, file in enumerate(
-            sorted(
-                files, key=lambda current_file: (current_file.name, str(current_file))
-            ),
-            start=1,
-        ):
-            if self.renameWith:
-                new_name = f"{self.renameWith}_{index}{file.suffix}"
-            else:
-                new_name = f"{index}{file.suffix}"
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeRemainingColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("[cyan]Renaming files...", total=len(files))
+            for index, file in enumerate(
+                sorted(
+                    files,
+                    key=lambda current_file: (current_file.name, str(current_file)),
+                ),
+                start=1,
+            ):
+                progress.advance(task)
+                if self.renameWith:
+                    new_name = f"{self.renameWith}_{index}{file.suffix}"
+                else:
+                    new_name = f"{index}{file.suffix}"
 
-            destination_path = self.target_dir / new_name
+                destination_path = self.target_dir / new_name
 
-            new_path = build_non_conflicting_path(destination_path)
+                new_path = build_non_conflicting_path(destination_path)
 
-            original_path = file.resolve()
+                original_path = file.resolve()
 
-            if self.dry_run:
-                print(f"[DRY RUN] {file.name} -> {new_path.name}")
-            else:
-                file.rename(new_path)
-                print(f"{file.name} -> {new_path.name}")
-                rename_map[str(new_path.resolve())] = str(original_path)
+                if self.dry_run:
+                    console.print(
+                        f"[dim][DRY RUN][/dim] {file.name} -> {new_path.name}"
+                    )
+                else:
+                    file.rename(new_path)
+                    rename_map[str(new_path.resolve())] = str(original_path)
 
         if self.save_history and self.history_path and not self.dry_run:
             save_history(self.history_path, rename_map)
-            print(f"History saved to {self.history_path.name}")
+            console.print(f"[green]History saved to {self.history_path.name}[/green]")
 
     def separate(self) -> None:
         match self.separate_choice:
             case SeparateChoices.EXTENSION:
                 if not self.sort_extension:
-                    print("No extension specified for separation.")
+                    console.print("[red]No extension specified for separation.[/red]")
                     return
 
                 separate_by_extension(
@@ -155,7 +180,7 @@ class FileOrganizer:
                 )
             case SeparateChoices.EXTENSION_AND_DATE:
                 if not self.sort_extension:
-                    print("No extension specified for separation.")
+                    console.print("[red]No extension specified for separation.[/red]")
                     return
 
                 separate_by_extension_and_date(
@@ -179,17 +204,17 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case _:
-                print("Invalid separation choice.")
+                console.print("[red]Invalid separation choice.[/red]")
 
     def merge(self) -> None:
         if not self.working_dirs:
-            print("No working directories specified for merge.")
+            console.print("[red]No working directories specified for merge.[/red]")
             return
 
         match self.separate_choice:
             case SeparateChoices.EXTENSION:
                 if not self.sort_extension:
-                    print("No extension specified for merge.")
+                    console.print("[red]No extension specified for merge.[/red]")
                     return
 
                 merge_by_extension(
@@ -213,7 +238,7 @@ class FileOrganizer:
                 )
             case SeparateChoices.EXTENSION_AND_DATE:
                 if not self.sort_extension:
-                    print("No extension specified for merge.")
+                    console.print("[red]No extension specified for merge.[/red]")
                     return
 
                 merge_by_extension_and_date(
@@ -236,4 +261,4 @@ class FileOrganizer:
                     dry_run=self.dry_run,
                 )
             case _:
-                print("Invalid merge choice.")
+                console.print("[red]Invalid merge choice.[/red]")
