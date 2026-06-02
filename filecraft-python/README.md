@@ -57,6 +57,10 @@ filecraft --help
 PYTHONPATH=src python -m file_organiser_python.main --help
 ```
 
+## Global Options
+
+- `--version`, `-v`: Show the application's version and exit.
+
 ## Commands
 
 - `filecraft rename`

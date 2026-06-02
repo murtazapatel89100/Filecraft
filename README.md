@@ -25,6 +25,7 @@ See the [filecraft-python README](filecraft-python/README.md) for detailed insta
 cd filecraft-python
 poetry install --with dev --sync
 poetry run filecraft --help
+poetry run filecraft --version
 ```
 
 ## Example Commands

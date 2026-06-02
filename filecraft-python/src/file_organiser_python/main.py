@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import date
 from typing import Optional
+import importlib.metadata
 
 import typer
 
@@ -278,6 +279,31 @@ def merge(
     except (MissingTargetDirectoryError, TargetPathNotDirectoryError) as exc:
         raise typer.BadParameter(str(exc), param_hint="--target-dir") from exc
     organizer.merge()
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        try:
+            version = importlib.metadata.version("filecraft-cli")
+            console.print(f"Filecraft CLI version: {version}")
+        except importlib.metadata.PackageNotFoundError:
+            console.print("Filecraft CLI version: unknown")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        is_eager=True,
+        help="Show the application's version and exit.",
+    )
+) -> None:
+    """Filecraft CLI - Organize your files easily."""
+    pass
 
 
 if __name__ == "__main__":
